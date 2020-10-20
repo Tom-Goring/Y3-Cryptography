@@ -14,6 +14,7 @@ struct CryptoGUI {
     isbn_button: button::State,
     credit_button: button::State,
     clear_button: button::State,
+    output: String,
 }
 
 #[derive(Debug, Clone)]
@@ -42,9 +43,15 @@ impl Sandbox for CryptoGUI {
             Message::ThemeChanged(theme) => self.theme = theme,
             Message::ISBNChanged(value) => self.isbn_value = value,
             Message::CreditChanged(value) => self.credit_value = value,
-            Message::ISBNButtonPressed => (),
+            Message::ISBNButtonPressed => {
+                if self.isbn_value.len() != 10 {
+                    self.output = String::from("A valid ISBN must have 10 digits");
+                }
+            },
             Message::CreditButtonPressed => (),
-            Message::ClearButtonPressed => (),
+            Message::ClearButtonPressed => {
+                self.output = String::from("");
+            },
         }
     }
 
@@ -94,7 +101,7 @@ impl Sandbox for CryptoGUI {
             .on_press(Message::CreditButtonPressed)
             .style(self.theme);
 
-        let text_field = Text::new("Placeholder").width(Length::Fill).width(Length::FillPortion(100));
+        let text_field = Text::new(&self.output).width(Length::Fill).width(Length::FillPortion(100));
         let clear_button = Button::new(&mut self.clear_button, Text::new("Clear")).padding(10).on_press(Message::ClearButtonPressed).style(self.theme).width(Length::FillPortion(16));
 
         let content = Column::new()
