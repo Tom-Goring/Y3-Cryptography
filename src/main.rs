@@ -1,4 +1,4 @@
-use iced::{button, text_input, Button, Column, Container, Element, Length, Radio, Row, Sandbox, Settings, Text, TextInput};
+use iced::{button, text_input, Button, Column, Container, Element, Length, Radio, Row, Sandbox, Settings, Text, TextInput, HorizontalAlignment};
 
 pub fn main() {
     CryptoGUI::run(Settings::default())
@@ -102,7 +102,7 @@ impl Sandbox for CryptoGUI {
             .style(self.theme);
 
         let text_field = Text::new(&self.output).width(Length::Fill).width(Length::FillPortion(100));
-        let clear_button = Button::new(&mut self.clear_button, Text::new("Clear")).padding(10).on_press(Message::ClearButtonPressed).style(self.theme).width(Length::FillPortion(16));
+        let clear_button = Button::new(&mut self.clear_button, Text::new("Clear").horizontal_alignment(HorizontalAlignment::Center)).padding(10).on_press(Message::ClearButtonPressed).style(self.theme).width(Length::FillPortion(16));
 
         let content = Column::new()
             .spacing(20)
