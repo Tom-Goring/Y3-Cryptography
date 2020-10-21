@@ -39,7 +39,7 @@ impl Sandbox for CryptoGUI {
     }
 
     fn title(&self) -> String {
-        String::from("Styling - Iced")
+        String::from("Cryptography - Tom Goring Y3")
     }
 
     fn update(&mut self, message: Message) {
