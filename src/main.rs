@@ -1,5 +1,8 @@
 use iced::{button, text_input, Button, Column, Container, Element, Length, Radio, Row, Sandbox, Settings, Text, TextInput, HorizontalAlignment};
 
+use cryptolib;
+use cryptolib::ISBNVerificationError;
+
 pub fn main() {
     CryptoGUI::run(Settings::default())
 }
@@ -15,6 +18,8 @@ struct CryptoGUI {
     credit_button: button::State,
     clear_button: button::State,
     output: String,
+    output_err: bool,
+    output_success: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -44,13 +49,33 @@ impl Sandbox for CryptoGUI {
             Message::ISBNChanged(value) => self.isbn_value = value,
             Message::CreditChanged(value) => self.credit_value = value,
             Message::ISBNButtonPressed => {
-                if self.isbn_value.len() != 10 {
-                    self.output = String::from("A valid ISBN must have 10 digits");
-                }
+                let result = cryptolib::verify_isbn(&self.isbn_value);
+                    match result {
+                        Err(cryptolib::ISBNVerificationError::InvalidDigitCount) => {
+                            self.output = String::from("A valid ISBN must have 10 digits");
+                            self.output_err = true;
+                        },
+                        Err(cryptolib::ISBNVerificationError::InvalidDigitsFound) => {
+                            self.output = String::from("A valid ISBN must only contain integers and dashes");
+                            self.output_err = true;
+                        },
+                        Err(cryptolib::ISBNVerificationError::NonValidISBN) => {
+                            self.output = String::from("Invalid ISBN detected");
+                            self.output_err = true;
+                        },
+                        Ok(..) => {
+                            self.output = String::from("Valid ISBN!");
+                            self.output_err = false;
+                            self.output_success = true;
+                        }
+                    }
             },
             Message::CreditButtonPressed => (),
             Message::ClearButtonPressed => {
                 self.output = String::from("");
+                self.output_success = false;
+                self.output_err = false;
+                self.isbn_value = String::from("");
             },
         }
     }
@@ -101,7 +126,16 @@ impl Sandbox for CryptoGUI {
             .on_press(Message::CreditButtonPressed)
             .style(self.theme);
 
-        let text_field = Text::new(&self.output).width(Length::Fill).width(Length::FillPortion(100));
+        let color;
+        if self.output_err {
+            color = [1.0, 0.0, 0.0];
+        } else if self.output_success {
+            color = [0.0, 1.0, 0.0];
+        } else {
+            color = [0.0, 0.0, 0.0];
+        }
+
+        let text_field = Text::new(&self.output).color(color).width(Length::FillPortion(100));
         let clear_button = Button::new(&mut self.clear_button, Text::new("Clear").horizontal_alignment(HorizontalAlignment::Center)).padding(10).on_press(Message::ClearButtonPressed).style(self.theme).width(Length::FillPortion(16));
 
         let content = Column::new()
@@ -338,7 +372,7 @@ mod style {
             }
 
             fn selection_color(&self) -> Color {
-                unimplemented!()
+                Color::BLACK
             }
 
             fn hovered(&self) -> text_input::Style {

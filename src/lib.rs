@@ -6,6 +6,8 @@ pub enum ISBNVerificationError {
     InvalidDigitsFound,
 }
 
+// TODO: Add support for final digit X
+
 pub fn verify_isbn(isbn: &String) -> Result<(), ISBNVerificationError> {
     let mut stripped_isbn = isbn.replace("-", "");
 
