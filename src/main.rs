@@ -1,7 +1,6 @@
 use iced::{button, text_input, Button, Column, Container, Element, Length, Radio, Row, Sandbox, Settings, Text, TextInput, HorizontalAlignment};
 
 use cryptolib;
-use cryptolib::ISBNVerificationError;
 
 pub fn main() {
     CryptoGUI::run(Settings::default())
@@ -62,7 +61,7 @@ impl Sandbox for CryptoGUI {
                         Err(cryptolib::ISBNVerificationError::NonValidISBN) => {
                             self.output = String::from("Invalid ISBN detected");
                             self.output_err = true;
-                        },
+                        }
                         Ok(..) => {
                             self.output = String::from("Valid ISBN!");
                             self.output_err = false;

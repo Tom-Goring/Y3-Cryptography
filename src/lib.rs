@@ -9,23 +9,32 @@ pub enum ISBNVerificationError {
 // TODO: Add support for final digit X
 
 pub fn verify_isbn(isbn: &String) -> Result<(), ISBNVerificationError> {
+    let mut error_digit: i32 = -1;
+
     let mut stripped_isbn = isbn.replace("-", "");
 
     if stripped_isbn.len() != 10 {
         return Err(InvalidDigitCount)
     }
 
+    if stripped_isbn.chars().last().unwrap() == 'X' {
+        error_digit = 10;
+        stripped_isbn.pop();
+    }
+
     if !stripped_isbn.chars().all(char::is_numeric) {
         return Err(InvalidDigitsFound)
     }
 
-    let error_digit = stripped_isbn.pop().unwrap().to_digit(10).unwrap();
+    if error_digit == -1 {
+        error_digit = stripped_isbn.pop().unwrap().to_digit(10).unwrap() as i32;
+    }
 
     if stripped_isbn
         .chars()
         .enumerate()
-        .map(|(i, c)| (i as u32 + 1) * c.to_digit(10).unwrap())
-        .sum::<u32>() % 11 != error_digit {
+        .map(|(i, c)| (i as i32 + 1) * c.to_digit(10).unwrap() as i32)
+        .sum::<i32>() % 11 != error_digit {
         Err(NonValidISBN)
     } else {
         Ok(())
@@ -42,7 +51,8 @@ mod tests {
             "960-425-059-0",
             "1-84356-028-3",
             "0-943396-04-2",
-            "0-2-33-56131-5"
+            "0-2-33-56131-5",
+            "0-9752298-0-X"
         ];
 
         valid_isbn_list.iter().for_each(|&isbn| assert!(verify_isbn(&String::from(isbn)).is_ok()));
