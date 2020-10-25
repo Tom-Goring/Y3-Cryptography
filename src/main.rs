@@ -1,4 +1,7 @@
-use iced::{button, text_input, Button, Column, Container, Element, Length, Radio, Row, Sandbox, Settings, Text, TextInput, HorizontalAlignment};
+use iced::{
+    button, text_input, Button, Column, Container, Element, HorizontalAlignment, Length, Radio,
+    Row, Sandbox, Settings, Text, TextInput,
+};
 
 use cryptolib;
 
@@ -28,7 +31,7 @@ enum Message {
     CreditChanged(String),
     ISBNButtonPressed,
     CreditButtonPressed,
-    ClearButtonPressed
+    ClearButtonPressed,
 }
 
 impl Sandbox for CryptoGUI {
@@ -49,33 +52,58 @@ impl Sandbox for CryptoGUI {
             Message::CreditChanged(value) => self.credit_value = value,
             Message::ISBNButtonPressed => {
                 let result = cryptolib::verify_isbn(&self.isbn_value);
-                    match result {
-                        Err(cryptolib::ISBNVerificationError::InvalidDigitCount) => {
-                            self.output = String::from("A valid ISBN must have 10 digits");
-                            self.output_err = true;
-                        },
-                        Err(cryptolib::ISBNVerificationError::InvalidDigitsFound) => {
-                            self.output = String::from("A valid ISBN must only contain integers and dashes");
-                            self.output_err = true;
-                        },
-                        Err(cryptolib::ISBNVerificationError::NonValidISBN) => {
-                            self.output = String::from("Invalid ISBN detected");
-                            self.output_err = true;
-                        }
-                        Ok(..) => {
-                            self.output = String::from("Valid ISBN!");
-                            self.output_err = false;
-                            self.output_success = true;
-                        }
+                match result {
+                    Err(cryptolib::ISBNVerificationError::InvalidDigitCount) => {
+                        self.output = String::from("A valid ISBN must have 10 digits");
+                        self.output_err = true;
                     }
-            },
-            Message::CreditButtonPressed => (),
+                    Err(cryptolib::ISBNVerificationError::InvalidDigitsFound) => {
+                        self.output =
+                            String::from("A valid ISBN must only contain integers and dashes");
+                        self.output_err = true;
+                    }
+                    Err(cryptolib::ISBNVerificationError::NonValidISBN) => {
+                        self.output = String::from("Invalid ISBN detected");
+                        self.output_err = true;
+                    }
+                    Ok(..) => {
+                        self.output = String::from("Valid ISBN!");
+                        self.output_err = false;
+                        self.output_success = true;
+                    }
+                }
+            }
+            Message::CreditButtonPressed => {
+                let result = cryptolib::verify_credit_card(&self.credit_value);
+                match result {
+                    Err(cryptolib::CreditCardVerificationError::InvalidLength) => {
+                        self.output =
+                            String::from("A valid credit card number must have 16 digits.");
+                        self.output_err = true;
+                    }
+                    Err(cryptolib::CreditCardVerificationError::InvalidDigitsFound) => {
+                        self.output =
+                            String::from("A valid credit card number must be fully numeric.");
+                        self.output_err = true;
+                    }
+                    Err(cryptolib::CreditCardVerificationError::InvalidCreditCard) => {
+                        self.output = String::from("Inputted credit card is not valid.");
+                        self.output_err = true;
+                    }
+                    Ok(..) => {
+                        self.output = String::from("Valid credit card number!");
+                        self.output_err = false;
+                        self.output_success = true;
+                    }
+                }
+            }
             Message::ClearButtonPressed => {
                 self.output = String::from("");
                 self.output_success = false;
                 self.output_err = false;
                 self.isbn_value = String::from("");
-            },
+                self.credit_value = String::from("");
+            }
         }
     }
 
@@ -90,7 +118,7 @@ impl Sandbox for CryptoGUI {
                         Some(self.theme),
                         Message::ThemeChanged,
                     )
-                        .style(self.theme),
+                    .style(self.theme),
                 )
             },
         );
@@ -101,9 +129,9 @@ impl Sandbox for CryptoGUI {
             &self.isbn_value,
             Message::ISBNChanged,
         )
-            .padding(10)
-            .size(20)
-            .style(self.theme);
+        .padding(10)
+        .size(20)
+        .style(self.theme);
 
         let isbn_button = Button::new(&mut self.isbn_button, Text::new("Submit"))
             .padding(10)
@@ -116,9 +144,9 @@ impl Sandbox for CryptoGUI {
             &self.credit_value,
             Message::CreditChanged,
         )
-            .padding(10)
-            .size(20)
-            .style(self.theme);
+        .padding(10)
+        .size(20)
+        .style(self.theme);
 
         let credit_button = Button::new(&mut self.credit_button, Text::new("Submit"))
             .padding(10)
@@ -134,8 +162,17 @@ impl Sandbox for CryptoGUI {
             color = [0.0, 0.0, 0.0];
         }
 
-        let text_field = Text::new(&self.output).color(color).width(Length::FillPortion(100));
-        let clear_button = Button::new(&mut self.clear_button, Text::new("Clear").horizontal_alignment(HorizontalAlignment::Center)).padding(10).on_press(Message::ClearButtonPressed).style(self.theme).width(Length::FillPortion(16));
+        let text_field = Text::new(&self.output)
+            .color(color)
+            .width(Length::FillPortion(100));
+        let clear_button = Button::new(
+            &mut self.clear_button,
+            Text::new("Clear").horizontal_alignment(HorizontalAlignment::Center),
+        )
+        .padding(10)
+        .on_press(Message::ClearButtonPressed)
+        .style(self.theme)
+        .width(Length::FillPortion(16));
 
         let content = Column::new()
             .spacing(20)
@@ -143,7 +180,12 @@ impl Sandbox for CryptoGUI {
             .max_width(600)
             .push(choose_theme)
             .push(Row::new().spacing(10).push(isbn_input).push(isbn_button))
-            .push(Row::new().spacing(10).push(credit_input).push(credit_button))
+            .push(
+                Row::new()
+                    .spacing(10)
+                    .push(credit_input)
+                    .push(credit_button),
+            )
             .push(Row::new().spacing(10).push(text_field).push(clear_button));
 
         Container::new(content)
@@ -157,10 +199,7 @@ impl Sandbox for CryptoGUI {
 }
 
 mod style {
-    use iced::{
-        button, checkbox, container, progress_bar, radio, scrollable, slider,
-        text_input,
-    };
+    use iced::{button, checkbox, container, progress_bar, radio, scrollable, slider, text_input};
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum Theme {
@@ -258,9 +297,7 @@ mod style {
         impl button::StyleSheet for Button {
             fn active(&self) -> button::Style {
                 button::Style {
-                    background: Some(Background::Color(Color::from_rgb(
-                        0.11, 0.42, 0.87,
-                    ))),
+                    background: Some(Background::Color(Color::from_rgb(0.11, 0.42, 0.87))),
                     border_radius: 12,
                     shadow_offset: Vector::new(1.0, 1.0),
                     text_color: Color::from_rgb8(0xEE, 0xEE, 0xEE),
@@ -280,8 +317,8 @@ mod style {
 
     mod dark {
         use iced::{
-            button, checkbox, container, progress_bar, radio, scrollable,
-            slider, text_input, Background, Color,
+            button, checkbox, container, progress_bar, radio, scrollable, slider, text_input,
+            Background, Color,
         };
 
         const SURFACE: Color = Color::from_rgb(
@@ -313,9 +350,7 @@ mod style {
         impl container::StyleSheet for Container {
             fn style(&self) -> container::Style {
                 container::Style {
-                    background: Some(Background::Color(Color::from_rgb8(
-                        0x36, 0x39, 0x3F,
-                    ))),
+                    background: Some(Background::Color(Color::from_rgb8(0x36, 0x39, 0x3F))),
                     text_color: Some(Color::WHITE),
                     ..container::Style::default()
                 }
@@ -434,10 +469,7 @@ mod style {
                 let active = self.active();
 
                 scrollable::Scrollbar {
-                    background: Some(Background::Color(Color {
-                        a: 0.5,
-                        ..SURFACE
-                    })),
+                    background: Some(Background::Color(Color { a: 0.5, ..SURFACE })),
                     scroller: scrollable::Scroller {
                         color: HOVERED,
                         ..active.scroller
@@ -516,11 +548,7 @@ mod style {
         impl checkbox::StyleSheet for Checkbox {
             fn active(&self, is_checked: bool) -> checkbox::Style {
                 checkbox::Style {
-                    background: Background::Color(if is_checked {
-                        ACTIVE
-                    } else {
-                        SURFACE
-                    }),
+                    background: Background::Color(if is_checked { ACTIVE } else { SURFACE }),
                     checkmark_color: Color::WHITE,
                     border_radius: 2,
                     border_width: 1,
