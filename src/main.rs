@@ -5,14 +5,17 @@ mod gui;
 use gui::Theme;
 use gui::ToolBar;
 use gui::Week1;
-use gui::Week1Message;
 use gui::Week2;
+
+use crate::gui::week1;
+use crate::gui::week2;
 
 #[derive(Debug, Clone)]
 pub enum Message {
     ViewWeek1,
     ViewWeek2,
-    Week1Change(Week1Message),
+    Week1Update(week1::Update),
+    Week2Update(week2::Update),
 }
 
 enum Page {
@@ -55,7 +58,8 @@ impl Sandbox for CryptographyGUI {
         match message {
             Message::ViewWeek1 => self.current_page = Page::Week1,
             Message::ViewWeek2 => self.current_page = Page::Week2,
-            Message::Week1Change(change) => self.week1.update(change),
+            Message::Week1Update(change) => self.week1.update(change),
+            Message::Week2Update(change) => self.week2.update(change),
         }
     }
 

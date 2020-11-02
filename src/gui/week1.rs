@@ -12,7 +12,7 @@ use crypto::credit::CreditCardVerificationError;
 use crypto::isbn::ISBNVerificationError;
 
 #[derive(Clone, Debug)]
-pub enum Week1Message {
+pub enum Update {
     IsbnInputChange(String),
     CreditInputChange(String),
     IsbnSubmit,
@@ -20,7 +20,7 @@ pub enum Week1Message {
     ClearOutput,
 }
 
-use Week1Message::*;
+use Update::*;
 
 #[derive(Default)]
 pub struct Week1 {
@@ -44,7 +44,7 @@ impl Week1 {
         }
     }
 
-    pub fn update(&mut self, msg: Week1Message) {
+    pub fn update(&mut self, msg: Update) {
         match msg {
             IsbnInputChange(s) => {
                 self.isbn_value = s;
@@ -107,7 +107,7 @@ impl Week1 {
             &mut self.isbn_input,
             "Enter ISBN...",
             &self.isbn_value,
-            |s| Message::Week1Change(IsbnInputChange(s)),
+            |s| Message::Week1Update(IsbnInputChange(s)),
         )
         .padding(10)
         .size(20)
@@ -117,19 +117,19 @@ impl Week1 {
             &mut self.credit_input,
             "Enter credit card number...",
             &self.credit_value,
-            |s| Message::Week1Change(CreditInputChange(s)),
+            |s| Message::Week1Update(CreditInputChange(s)),
         )
         .padding(10)
         .size(20)
         .style(self.theme);
 
         let isbn_submit = Button::new(&mut self.isbn_button, Text::new("Submit"))
-            .on_press(Message::Week1Change(IsbnSubmit))
+            .on_press(Message::Week1Update(IsbnSubmit))
             .padding(10)
             .style(self.theme);
 
         let credit_submit = Button::new(&mut self.credit_button, Text::new("Submit"))
-            .on_press(Message::Week1Change(CreditSubmit))
+            .on_press(Message::Week1Update(CreditSubmit))
             .padding(10)
             .style(self.theme);
 
@@ -151,7 +151,7 @@ impl Week1 {
             Text::new("Clear").horizontal_alignment(HorizontalAlignment::Center),
         )
         .padding(10)
-        .on_press(Message::Week1Change(ClearOutput))
+        .on_press(Message::Week1Update(ClearOutput))
         .style(self.theme)
         .width(Length::FillPortion(16));
 
