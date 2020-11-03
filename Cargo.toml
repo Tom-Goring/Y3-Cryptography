@@ -16,3 +16,4 @@ path = "src/main.rs"
 
 [dependencies]
 iced = { git = "https://github.com/hecrj/iced.git" }
+itertools = "0.9.0"

@@ -4,7 +4,16 @@ pub enum CreditCardVerificationError {
     InvalidLength,
 }
 
-pub fn verify_credit_card(credit_card_number: &String) -> Result<(), CreditCardVerificationError> {
+fn m_mul(a: u32, b: u32, modulo: u32) -> u32 {
+    let sum = a * b;
+    if sum > modulo {
+        sum - modulo
+    } else {
+        sum
+    }
+}
+
+pub fn verify_credit_card(credit_card_number: &str) -> Result<(), CreditCardVerificationError> {
     let stripped_input = credit_card_number.replace(" ", "");
 
     if !stripped_input.chars().all(char::is_numeric) {
@@ -15,28 +24,20 @@ pub fn verify_credit_card(credit_card_number: &String) -> Result<(), CreditCardV
         return Err(CreditCardVerificationError::InvalidLength);
     }
 
-    if stripped_input
+    let integers: Vec<u32> = stripped_input
         .chars()
-        .enumerate()
-        .map(|(i, d)| {
-            if i % 2 == 0 {
-                let mut x = 2 * d.to_digit(10).unwrap();
-                if x >= 10 {
-                    x -= 9;
-                }
-                x
-            } else {
-                d.to_digit(10).unwrap()
-            }
-        })
-        .sum::<u32>()
-        % 10
-        == 0
-    {
-        return Ok(());
-    }
+        .map(|c| c.to_digit(10).unwrap())
+        .collect();
 
-    Err(CreditCardVerificationError::InvalidCreditCard)
+    let odd = integers.iter().skip(1).step_by(2).map(|d| *d as u32);
+    let even = integers.iter().step_by(2).map(|&d| m_mul(2, d, 9));
+    let both: u32 = itertools::interleave(even, odd).sum();
+
+    return if both % 10 == 0 {
+        Ok(())
+    } else {
+        Err(CreditCardVerificationError::InvalidCreditCard)
+    };
 }
 
 #[cfg(test)]

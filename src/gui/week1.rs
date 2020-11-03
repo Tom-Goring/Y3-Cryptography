@@ -7,7 +7,6 @@ use crate::Message;
 
 use super::style;
 
-use crypto;
 use crypto::credit::CreditCardVerificationError;
 use crypto::isbn::ISBNVerificationError;
 
@@ -181,6 +180,5 @@ impl Week1 {
             .center_x()
             .center_y()
             .style(self.theme)
-            .into()
     }
 }

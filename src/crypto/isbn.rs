@@ -4,7 +4,7 @@ pub enum ISBNVerificationError {
     InvalidDigitsFound,
 }
 
-pub fn verify_isbn(isbn: &String) -> Result<(), ISBNVerificationError> {
+pub fn verify_isbn(isbn: &str) -> Result<(), ISBNVerificationError> {
     let mut error_digit: i32 = -1;
 
     let mut stripped_isbn = isbn.replace("-", "");
@@ -13,7 +13,7 @@ pub fn verify_isbn(isbn: &String) -> Result<(), ISBNVerificationError> {
         return Err(ISBNVerificationError::InvalidDigitCount);
     }
 
-    if stripped_isbn.chars().last().unwrap() == 'X' {
+    if stripped_isbn.ends_with('X') {
         error_digit = 10;
         stripped_isbn.pop();
     }

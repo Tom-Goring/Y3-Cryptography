@@ -6,11 +6,16 @@ pub const D8: [u32; 6] = [7, 8, 7, 1, 9, 6];
 pub const D9: [u32; 6] = [9, 1, 7, 8, 7, 7];
 pub const D10: [u32; 6] = [1, 2, 9, 10, 4, 1];
 
-pub fn calculate_digit(weights: &[u32], input: &[u32]) -> Result<u32, ()> {
-    if input.len() != 6 {
+pub const S1: [u32; 10] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+pub const S2: [u32; 10] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+pub const S3: [u32; 10] = [1, 4, 9, 5, 3, 3, 5, 9, 4, 1];
+pub const S4: [u32; 10] = [1, 8, 5, 9, 4, 7, 2, 6, 3, 10];
+
+pub fn calculate_digit(weights: &[u32], input: &[u32], length: usize) -> Result<u32, ()> {
+    if input.len() != length {
         return Err(());
     }
-    if weights.len() != 6 {
+    if weights.len() != length {
         return Err(());
     }
 
@@ -22,9 +27,13 @@ pub fn calculate_digit(weights: &[u32], input: &[u32]) -> Result<u32, ()> {
         % 11)
 }
 
-pub fn calculate_digits(weights: &[&[u32]], input: &String) -> Result<String, String> {
-    if input.len() != 6 {
-        return Err("Input length too small".into());
+pub fn calculate_digits(weights: &[&[u32]], input: &str, length: usize) -> Result<String, String> {
+    if input.len() != length {
+        return Err(format!(
+            "Input length too small - should be {} not {}!",
+            length,
+            input.len()
+        ));
     }
 
     let input_as_digits: Result<Vec<u32>, _> = input
@@ -37,18 +46,18 @@ pub fn calculate_digits(weights: &[&[u32]], input: &String) -> Result<String, St
             .iter()
             .map(|weights| {
                 char::from_digit(
-                    calculate_digit(*weights, &digit_vec[..]).unwrap() as u32,
+                    calculate_digit(*weights, &digit_vec[..], length).unwrap() as u32,
                     10,
                 )
-                .ok_or("Unusable number".into())
+                .ok_or_else(|| "Unusable number".into())
             })
             .collect(),
         Err(error) => Err(error.into()),
     };
 
     match check_digits {
-        Ok(digits) => Ok(input.clone().add(&digits)),
-        Err(error) => Err(format!("{}", error)),
+        Ok(digits) => Ok(String::from(input).add(&digits)),
+        Err(error) => Err(error),
     }
 }
 
@@ -65,7 +74,7 @@ mod tests {
 
         inputs.iter().enumerate().for_each(|(i, _)| {
             assert_eq!(
-                &calculate_digits(&weights[..], inputs[i].into()).unwrap(),
+                &calculate_digits(&weights[..], &String::from(inputs[i]), 6).unwrap(),
                 results[i]
             )
         });
@@ -76,6 +85,22 @@ mod tests {
         let weights = [&D7[..], &D8[..], &D9[..], &D10[..]];
         let input = "000003";
 
-        calculate_digits(&weights, input.into()).unwrap_err();
+        calculate_digits(&weights, &String::from(input), 6).unwrap_err();
+    }
+
+    #[test]
+    pub fn check_syndrome_generation_success() {
+        let weights = [&S1[..], &S2[..], &S3[..], &S4[..]];
+        let input = "0000118435";
+
+        let digits = calculate_digits(&weights, &String::from(input), 10).unwrap();
+
+        assert_eq!(digits, String::from("00001184350000"));
+
+        let input = "8899880747";
+
+        let digits = calculate_digits(&weights, &String::from(input), 10).unwrap();
+
+        assert_eq!(digits, String::from("88998807472733"));
     }
 }

@@ -6,12 +6,12 @@ use iced::{
 use super::style;
 use crate::Message;
 
-use crypto;
-
 #[derive(Clone, Debug)]
 pub enum Update {
-    InputSubmitted,
-    InputChanged(String),
+    SixDigitInputSubmitted,
+    SixDigitInputChanged(String),
+    TenDigitInputSubmitted,
+    TenDigitInputChanged(String),
     ClearOutput,
 }
 
@@ -34,6 +34,11 @@ pub struct Week2 {
     input_field: text_input::State,
     input_value: String,
     submit: button::State,
+
+    syndrome_input_field: text_input::State,
+    syndrome_input: String,
+    submit_syndrome: button::State,
+
     output: String,
     output_state: OutputState,
     clear_button: button::State,
@@ -48,31 +53,50 @@ impl Week2 {
 
     pub fn update(&mut self, msg: Update) {
         match msg {
-            Update::InputChanged(s) => {
+            Update::SixDigitInputChanged(s) => {
                 self.input_value = s;
             }
-            Update::InputSubmitted => {
+            Update::SixDigitInputSubmitted => {
                 let weights = [
                     &crypto::hamming::D7[..],
                     &crypto::hamming::D8[..],
                     &crypto::hamming::D9[..],
                     &crypto::hamming::D10[..],
                 ];
-                let output = crypto::hamming::calculate_digits(&weights, &self.input_value);
-                match output {
-                    Ok(output) => {
-                        self.output = output;
-                        self.output_state = OutputState::Success;
-                    }
-                    Err(error) => {
-                        self.output = error;
-                        self.output_state = OutputState::Error;
-                    }
-                }
+                let output = crypto::hamming::calculate_digits(&weights, &self.input_value, 6);
+                self.handle_output(output);
+            }
+            Update::TenDigitInputSubmitted => {
+                let weights = [
+                    &crypto::hamming::S1[..],
+                    &crypto::hamming::S2[..],
+                    &crypto::hamming::S3[..],
+                    &crypto::hamming::S4[..],
+                ];
+                let output = crypto::hamming::calculate_digits(&weights, &self.syndrome_input, 10);
+                self.handle_output(output);
+            }
+            Update::TenDigitInputChanged(s) => {
+                self.syndrome_input = s;
             }
             Update::ClearOutput => {
                 self.output = "".into();
                 self.output_state = OutputState::Normal;
+                self.syndrome_input = "".into();
+                self.input_value = "".into();
+            }
+        }
+    }
+
+    fn handle_output(&mut self, result: Result<String, String>) {
+        match result {
+            Ok(output) => {
+                self.output = output;
+                self.output_state = OutputState::Success;
+            }
+            Err(error) => {
+                self.output = error;
+                self.output_state = OutputState::Error;
             }
         }
     }
@@ -82,18 +106,38 @@ impl Week2 {
             &mut self.input_field,
             "Enter number...",
             &self.input_value,
-            |s| Message::Week2Update(Update::InputChanged(s)),
+            |s| Message::Week2Update(Update::SixDigitInputChanged(s)),
         )
         .padding(10)
         .size(20)
         .style(self.theme);
 
         let submit_button = Button::new(&mut self.submit, Text::new("Submit"))
-            .on_press(Message::Week2Update(Update::InputSubmitted))
+            .on_press(Message::Week2Update(Update::SixDigitInputSubmitted))
             .padding(10)
             .style(self.theme);
 
         let input_row = Row::new().spacing(10).push(input_field).push(submit_button);
+
+        let syndrome_field = TextInput::new(
+            &mut self.syndrome_input_field,
+            "Enter number...",
+            &self.syndrome_input,
+            |s| Message::Week2Update(Update::TenDigitInputChanged(s)),
+        )
+        .padding(10)
+        .size(20)
+        .style(self.theme);
+
+        let syndrome_submit_button = Button::new(&mut self.submit_syndrome, Text::new("Submit"))
+            .on_press(Message::Week2Update(Update::TenDigitInputSubmitted))
+            .padding(10)
+            .style(self.theme);
+
+        let syndrome_row = Row::new()
+            .spacing(10)
+            .push(syndrome_field)
+            .push(syndrome_submit_button);
 
         let color = match self.output_state {
             OutputState::Success => [0.0, 1.0, 0.0],
@@ -128,6 +172,7 @@ impl Week2 {
             .padding(20)
             .max_width(600)
             .push(input_row)
+            .push(syndrome_row)
             .push(output_row)
             .into();
 
@@ -137,6 +182,5 @@ impl Week2 {
             .center_x()
             .center_y()
             .style(style::Theme::default())
-            .into()
     }
 }
