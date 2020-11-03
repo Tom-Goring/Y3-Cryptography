@@ -1,6 +1,6 @@
 use iced::{
-    button, text_input, Button, Column, Container, HorizontalAlignment, Length, Row, Text,
-    TextInput,
+    button, text_input, Align, Button, Column, Container, HorizontalAlignment, Length, Row, Text,
+    TextInput, VerticalAlignment,
 };
 
 use crate::Message;
@@ -144,7 +144,8 @@ impl Week1 {
 
         let output = Text::new(&self.output)
             .color(color)
-            .width(Length::FillPortion(100));
+            .width(Length::FillPortion(100))
+            .vertical_alignment(VerticalAlignment::Center);
 
         let clear_button = Button::new(
             &mut self.clear_button,
@@ -166,7 +167,13 @@ impl Week1 {
                     .push(credit_input)
                     .push(credit_submit),
             )
-            .push(Row::new().spacing(10).push(output).push(clear_button));
+            .push(
+                Row::new()
+                    .spacing(10)
+                    .push(output)
+                    .push(clear_button)
+                    .align_items(Align::Center),
+            );
 
         Container::new(content)
             .width(Length::Fill)
