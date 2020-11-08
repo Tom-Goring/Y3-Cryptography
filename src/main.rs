@@ -84,6 +84,6 @@ impl Sandbox for CryptographyGUI {
     }
 }
 
-fn main() -> iced::Result {
-    CryptographyGUI::run(Settings::default())
+fn main() {
+    CryptographyGUI::run(Settings::default());
 }
