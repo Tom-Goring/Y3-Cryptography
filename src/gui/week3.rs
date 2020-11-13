@@ -205,7 +205,7 @@ impl Week3 {
             .align_items(Align::End);
 
         let content: Element<_> = Column::new()
-            .spacing(20)
+            .spacing(10)
             .padding(20)
             .max_width(600)
             .push(encoding_row)
