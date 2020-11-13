@@ -9,7 +9,7 @@ pub enum CodingResult {
     InputError(String),
     SingleError(String, i32, i32),
     DoubleError(String, (i32, i32), (i32, i32)),
-    TripleError,
+    TripleError(String),
 }
 
 pub fn encode_bch(string: &str) -> Result<String, CodingResult> {
@@ -64,12 +64,15 @@ pub fn decode_bch(string: &str) -> Result<String, CodingResult> {
     return if p.value() + q.value() + r.value() == 0 {
         let position = match syndrome_vector[1].try_div(syndrome_vector[0]) {
             Ok(res) => res,
-            Err(_) => return Err(CodingResult::TripleError),
+            Err(err) => return Err(CodingResult::TripleError(err.into())),
         };
+
         let magnitude = syndrome_vector[0];
 
         if position == 0 {
-            return Err(CodingResult::TripleError);
+            return Err(CodingResult::TripleError(
+                "Error was detected at position zero!".into(),
+            ));
         }
 
         let correct_digit = Modular::new(integers[position.value() as usize - 1], 11) - magnitude;
@@ -92,28 +95,35 @@ pub fn decode_bch(string: &str) -> Result<String, CodingResult> {
 
         let root = match pre_root.sqrt() {
             Ok(root) => root,
-            Err(_) => return Err(CodingResult::TripleError),
+            Err(_) => {
+                return Err(CodingResult::TripleError(
+                    "Q^2 - 4PR did not have a valid root!".into(),
+                ))
+            }
         };
 
         let position1 = match (root - q).try_div(p * Modular::new(2, 11)) {
             Ok(res) => res,
-            Err(_) => return Err(CodingResult::TripleError),
+            Err(err) => return Err(CodingResult::TripleError(err.into())),
         };
 
         let position2 = match (Modular::new(0, 11) - q - root).try_div(p * Modular::new(2, 11)) {
             Ok(res) => res,
-            Err(_) => return Err(CodingResult::TripleError),
+            Err(err) => return Err(CodingResult::TripleError(err.into())),
         };
 
-        if position1 + position2 != 0 {
-            return Err(CodingResult::TripleError);
+        if position1 == 0 || position2 == 0 {
+            return Err(CodingResult::TripleError(
+                "Error was detected at position zero!".into(),
+            ));
         }
 
-        let magnitude2 = position1 * syndrome_vector[0]
-            - match (syndrome_vector[1]).try_div(position1 - position2) {
-                Ok(res) => res,
-                Err(_) => return Err(CodingResult::TripleError),
-            };
+        let magnitude2 = match (position1 * syndrome_vector[0] - syndrome_vector[1])
+            .try_div(position1 - position2)
+        {
+            Ok(res) => res,
+            Err(err) => return Err(CodingResult::TripleError(err.into())),
+        };
 
         let magnitude1 = syndrome_vector[0] - magnitude2;
 
@@ -127,32 +137,34 @@ pub fn decode_bch(string: &str) -> Result<String, CodingResult> {
         new_integers[position1.value() as usize - 1] = corrected1.value();
         new_integers[position2.value() as usize - 1] = corrected2.value();
 
-        let output = new_integers
+        let output: Result<String, CodingResult> = new_integers
             .iter()
-            .map(|&d| char::from_digit(d as u32, 10).unwrap())
-            .collect::<String>();
+            .map(|&d| {
+                char::from_digit(d as u32, 10).map_or_else(
+                    || {
+                        Err(CodingResult::TripleError(
+                            "Corrected a digit into 10".into(),
+                        ))
+                    },
+                    |c| Ok(c),
+                )
+            })
+            .collect();
 
-        Err(CodingResult::DoubleError(
-            output,
-            (position1.value(), position2.value()),
-            (magnitude1.value(), magnitude2.value()),
-        ))
+        match output {
+            Ok(output) => Err(CodingResult::DoubleError(
+                output,
+                (position1.value(), position2.value()),
+                (magnitude1.value(), magnitude2.value()),
+            )),
+            Err(error) => Err(error),
+        }
     };
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    pub fn test() {
-        let x = decode_bch("8899880747").unwrap_err();
-        match x {
-            CodingResult::DoubleError(_, (pos1, pos2), (mag1, mag2)) => {
-                assert_eq!(((pos1, pos2), (mag1, mag2)), ((3, 4), (1, 1)))
-            }
-            _ => panic!("Wrong error type returned"),
-        }
-    }
     #[test]
     pub fn bch_success() {
         let x = decode_bch("3745195876").unwrap();
@@ -166,7 +178,7 @@ mod tests {
             CodingResult::SingleError(output, pos, mag) => {
                 assert_eq!((output.as_str(), pos, mag), ("3745195876", 2, 2))
             }
-            _ => panic!("Wrong error type returned"),
+            err => panic!("Wrong error type returned. Error was: {:?}", err),
         }
     }
 
@@ -214,10 +226,9 @@ mod tests {
         ];
 
         inputs.iter().for_each(|row| {
-            println!("{}", row);
             let result = decode_bch(row).unwrap_err();
             match result {
-                CodingResult::TripleError => {}
+                CodingResult::TripleError(_) => {}
                 _ => panic!("Wrong error type returned"),
             }
         });

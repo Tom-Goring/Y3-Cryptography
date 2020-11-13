@@ -1,7 +1,8 @@
 mod style;
 mod toolbar;
 pub mod week1;
-pub(crate) mod week2;
+pub mod week2;
+pub mod week3;
 
 pub use style::Theme;
 pub use toolbar::ToolBar;

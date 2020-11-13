@@ -7,20 +7,24 @@ use gui::ToolBar;
 use gui::Week1;
 use gui::Week2;
 
-use crate::gui::week1;
 use crate::gui::week2;
+use crate::gui::week3::Week3;
+use crate::gui::{week1, week3};
 
 #[derive(Debug, Clone)]
 pub enum Message {
     ViewWeek1,
     ViewWeek2,
+    ViewWeek3,
     Week1Update(week1::Update),
     Week2Update(week2::Update),
+    Week3Update(week3::Update),
 }
 
 enum Page {
     Week1,
     Week2,
+    Week3,
 }
 
 impl Default for Page {
@@ -34,6 +38,7 @@ pub struct CryptographyGUI {
     toolbar: ToolBar,
     week1: Week1,
     week2: Week2,
+    week3: Week3,
     theme: Theme,
 }
 
@@ -42,11 +47,12 @@ impl Sandbox for CryptographyGUI {
 
     fn new() -> Self {
         Self {
-            toolbar: gui::ToolBar::new(),
-            week1: gui::Week1::new(),
-            week2: gui::Week2::new(),
+            toolbar: ToolBar::new(),
+            week1: Week1::new(),
+            week2: Week2::new(),
+            week3: Week3::new(),
             current_page: Page::default(),
-            theme: gui::Theme::default(),
+            theme: Theme::default(),
         }
     }
 
@@ -58,8 +64,10 @@ impl Sandbox for CryptographyGUI {
         match message {
             Message::ViewWeek1 => self.current_page = Page::Week1,
             Message::ViewWeek2 => self.current_page = Page::Week2,
+            Message::ViewWeek3 => self.current_page = Page::Week3,
             Message::Week1Update(change) => self.week1.update(change),
             Message::Week2Update(change) => self.week2.update(change),
+            Message::Week3Update(change) => self.week3.update(change),
         }
     }
 
@@ -72,6 +80,7 @@ impl Sandbox for CryptographyGUI {
             .push(match &self.current_page {
                 Page::Week1 => self.week1.view(),
                 Page::Week2 => self.week2.view(),
+                Page::Week3 => self.week3.view(),
             });
 
         Container::new(content)

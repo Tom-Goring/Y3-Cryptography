@@ -22,7 +22,7 @@ impl Modular {
     }
 
     pub fn try_div(&self, rhs: Self) -> Result<Self, &str> {
-        if self.modulo != self.value {
+        if self.modulo != rhs.modulo {
             return Err("Attempted division by a value of differing modulo");
         };
         if rhs.value.gcd(&self.modulo) != 1 {
