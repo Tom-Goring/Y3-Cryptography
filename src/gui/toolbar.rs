@@ -11,6 +11,7 @@ pub struct ToolBar {
     week2_button: button::State,
     week3_button: button::State,
     week4_button: button::State,
+    week5_button: button::State,
 }
 
 impl ToolBar {
@@ -44,6 +45,11 @@ impl ToolBar {
                 .push(
                     Button::new(&mut self.week4_button, Text::new("Week 4"))
                         .on_press(Message::ViewWeek4)
+                        .style(style::Theme::default()),
+                )
+                .push(
+                    Button::new(&mut self.week5_button, Text::new("Week 5"))
+                        .on_press(Message::ViewWeek5)
                         .style(style::Theme::default()),
                 ),
         )
