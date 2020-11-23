@@ -11,12 +11,14 @@ pub const S2: [u32; 10] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 pub const S3: [u32; 10] = [1, 4, 9, 5, 3, 3, 5, 9, 4, 1];
 pub const S4: [u32; 10] = [1, 8, 5, 9, 4, 7, 2, 6, 3, 10];
 
-pub fn calculate_digit(weights: &[u32], input: &[u32], length: usize) -> Result<u32, ()> {
+pub fn calculate_digit(weights: &[u32], input: &[u32], length: usize) -> Result<u32, &'static str> {
     if input.len() != length {
-        return Err(());
+        println!("Input length does not equal length.");
+        return Err("Input length does not equal length.");
     }
     if weights.len() != length {
-        return Err(());
+        println!("Weights length does not equal length.");
+        return Err("Weights length does not equal length.");
     }
 
     Ok(weights
@@ -49,7 +51,7 @@ pub fn calculate_digits(weights: &[&[u32]], input: &str, length: usize) -> Resul
                     calculate_digit(*weights, &digit_vec[..], length).unwrap() as u32,
                     10,
                 )
-                .ok_or_else(|| "Unusable number".into())
+                .ok_or_else(|| format!("Inputted string cannot be encoded using BCH(10,6)"))
             })
             .collect(),
         Err(error) => Err(error.into()),

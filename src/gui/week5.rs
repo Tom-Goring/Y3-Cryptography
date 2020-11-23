@@ -11,14 +11,19 @@ use crypto;
 pub enum Update {
     HashStringChanged(String),
     HashStringSubmitted,
+    BchHashStringChanged(String),
+    BchHashStringSubmitted,
     OutputCleared,
 }
 
 #[derive(Default)]
 pub struct Week5 {
     hash_input_field: text_input::State,
+    bch_hash_input_field: text_input::State,
     hash_submit_button: button::State,
+    bch_hash_submit_button: button::State,
     hash: String,
+    bch_hash: String,
     original_password: String,
     clear_button: button::State,
 }
@@ -36,17 +41,35 @@ impl Week5 {
                 self.hash = s;
             }
             Update::HashStringSubmitted => {
-                self.original_password = crypto::sha_cracker::crack(&self.hash, 6).unwrap();
+                self.original_password = crypto::sha_cracker::crack(
+                    &self.hash,
+                    6,
+                    &crypto::sha_cracker::ALPHABET,
+                    false,
+                )
+                .unwrap();
             }
             Update::OutputCleared => {
                 self.original_password = "".into();
                 self.hash = "".into();
             }
+            Update::BchHashStringChanged(s) => {
+                self.bch_hash = s;
+            }
+            Update::BchHashStringSubmitted => {
+                self.original_password = crypto::sha_cracker::crack(
+                    &self.bch_hash,
+                    6,
+                    &crypto::sha_cracker::BCH_ALPHABET,
+                    true,
+                )
+                .unwrap();
+            }
         }
     }
 
     pub fn view(&mut self) -> Container<Message> {
-        let warning = Text::new("WARNING: THIS WILL UTILISE 100% OF EVERY CORE ON YOUR MACHINE UNTIL THE PASSWORD IS CRACKED. THIS COULD TAKE A VERY LONG TIME ON A WEEK MACHINE. THINK CAREFULLY.").color(Color::from_rgb(1.0, 0.0, 0.0));
+        let warning = Text::new("WARNING: THIS WILL UTILISE 100% OF EVERY CORE ON YOUR MACHINE UNTIL THE PASSWORD IS CRACKED. THIS COULD TAKE A VERY LONG TIME ON A WEAK MACHINE. THINK CAREFULLY.").color(Color::from_rgb(1.0, 0.0, 0.0));
 
         let hash_input_field = TextInput::new(
             &mut self.hash_input_field,
@@ -67,6 +90,27 @@ impl Week5 {
             .spacing(10)
             .push(hash_input_field)
             .push(hash_submit_button);
+
+        let bch_hash_input_field = TextInput::new(
+            &mut self.bch_hash_input_field,
+            "Enter password:",
+            &self.bch_hash,
+            |s| Message::Week5Update(Update::BchHashStringChanged(s)),
+        )
+        .padding(10)
+        .size(20)
+        .style(style::Theme::default());
+
+        let bch_hash_submit_button =
+            Button::new(&mut self.bch_hash_submit_button, Text::new("Submit"))
+                .on_press(Message::Week5Update(Update::BchHashStringSubmitted))
+                .padding(10)
+                .style(style::Theme::default());
+
+        let bch_hash_row = Row::new()
+            .spacing(10)
+            .push(bch_hash_input_field)
+            .push(bch_hash_submit_button);
 
         let output = Text::new(&self.original_password)
             .width(Length::FillPortion(100))
@@ -91,6 +135,7 @@ impl Week5 {
             .max_width(600)
             .push(warning)
             .push(hash_row)
+            .push(bch_hash_row)
             .push(output_row)
             .into();
 
