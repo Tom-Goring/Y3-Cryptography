@@ -1,5 +1,3 @@
-use std::{num::ParseIntError};
-
 fn main() {
     let inputs = r#"c2543fff3bfa6f144c2f06a7de6cd10c0b650cae
 b47f363e2b430c0647f14deea3eced9b0ef300ce
@@ -16,24 +14,23 @@ e74295bfc2ed0b52d40073e8ebad555100df1380
 
     let now = Instant::now();
 
-    inputs.split("\n").for_each(|line| println!("{}", line));
-
-    let results_wrapped: ocl::Result<Vec<String>> = inputs.split("\n").map(|input| crack(input)).collect();
-    let results = results_wrapped.unwrap();
-
-    println!("Found {} results in {}s.", results.len(), now.elapsed().as_secs_f32());
-    println!("{:?}", results);
+    let inputs: Vec<&str> = inputs.split("\n").collect();
+    let result = crack(&inputs).unwrap();
+    println!("\nResult:");
+    println!("{:?}", result);
+    println!("All hashes cracked in {}s", now.elapsed().as_secs_f32());
 }
 
 use ocl::{ProQue, Buffer, MemFlags};
 use std::time::Instant;
 
-fn crack(input: &str) -> ocl::Result<String> {
+fn crack(inputs: &[&str]) -> ocl::Result<Vec<String>> {
+
     let src = include_str!("kernel.cl");
 
     let pro_que = ProQue::builder()
         .src(src)
-        .dims(2_147_483_647u32)
+        .dims(2000000000)
         .build()?;
 
     let raw_ascii_alphabet: Vec<u8> = vec![
@@ -41,15 +38,17 @@ fn crack(input: &str) -> ocl::Result<String> {
         't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
     ].iter().map(|elem| *elem as u8).collect();
 
-    let hex: Result<Vec<u8>, ParseIntError> =
+    let hexes: Vec<Vec<u8>> = inputs.iter().map(|input| {
+        println!("{}", input);
         (0..input.len())
             .step_by(2)
             .map(|i| {
-                u8::from_str_radix(&input[i..i+2], 16)
+                u8::from_str_radix(&input[i..i+2], 16).unwrap()
             })
-            .collect();
-    let hex = hex.unwrap();
-    let len = hex.len();
+            .collect()
+    }).collect();
+    
+    let targets: Vec<u8> = hexes.iter().flatten().cloned().collect();
 
     let alphabet = Buffer::builder()
         .queue(pro_que.queue().clone())
@@ -61,8 +60,8 @@ fn crack(input: &str) -> ocl::Result<String> {
     let target = Buffer::builder()
         .queue(pro_que.queue().clone())
         .flags(MemFlags::new().read_only())
-        .len(len)
-        .copy_host_slice(&hex)
+        .len(targets.len())
+        .copy_host_slice(&targets)
         .build()?;
 
     let done = Buffer::builder()
@@ -71,27 +70,44 @@ fn crack(input: &str) -> ocl::Result<String> {
             .copy_host_slice(&[0])
             .build()?;
 
-    let buffer = Buffer::builder().queue(pro_que.queue().clone()).len(6).build()?;
+    let num_targets = Buffer::builder()
+            .queue(pro_que.queue().clone())
+            .len(1)
+            .copy_host_slice(&[targets.len() / 20])
+            .build()?;
+
+    let outputs = Buffer::builder()
+        .queue(pro_que.queue().clone())
+        .len(6 * targets.len())
+        .build()?;
+
 
     let kernel = pro_que.kernel_builder("add")
-        .arg(&buffer)
+        .arg(&outputs)
         .arg(&alphabet)
         .arg(&target)
         .arg(&done)
+        .arg(&num_targets)
         .build()?;
 
     unsafe { kernel.enq()?; }
 
-    let mut vec = vec![0u8; buffer.len()];
-    buffer.read(&mut vec).enq()?;
+    let mut vec = vec![0u8; outputs.len()];
+    outputs.read(&mut vec).enq()?;
 
-    let mut string = String::new();
+    println!("{:?}", vec);
 
-    for elem in vec {
-        if elem != 0 {
-            string.push(elem as char);
+    let mut results = Vec::new();
+
+    for i in 0..inputs.len() {
+        let mut string = String::new();
+        for j in 0..6 {
+            if vec[(i * 6) + j] != 0 {
+                string.push(vec[i * 6 + j] as char);
+            }
         }
+        results.push(string);
     }
 
-    Ok(string.clone())
+    Ok(results.clone())
 }

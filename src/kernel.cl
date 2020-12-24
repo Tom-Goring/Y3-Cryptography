@@ -20,13 +20,14 @@ void sha1_init(SHA1Context *ctx);
 void sha1_update(SHA1Context *ctx, const BYTE data[], size_t len);
 void sha1_final(SHA1Context *ctx, BYTE hash[]);
 
-int indices_to_string(int *indices, char *string, int len,
+int indices_to_string(int *indices, BYTE *string, int len,
                       __global char *alphabet);
 bool increment_indices(char *indices, int len, int amount);
 
 __kernel void add(__global char *output, __global char *alphabet,
-                  __global BYTE *target, __global BYTE *done) {
-  if (*done != 1) {
+                  __global BYTE *target, __global BYTE *done,
+                  __global BYTE *num_targets) {
+  if (*done != *num_targets) {
     int indices[] = {-1, -1, -1, -1, -1, -1};
     BYTE string[] = {"\0\0\0\0\0\0"};
     char digest[40];
@@ -77,22 +78,26 @@ __kernel void add(__global char *output, __global char *alphabet,
     BYTE hash[20];
     sha1_final(&context, hash);
 
-    // check to see if hash is equivalent
+    // check to see if hash is equivalent to any of our targets
+    // for each target
     int pass = 1;
-    for (int i = 0; i < 20; i++) {
-      pass = pass && (hash[i] == target[i]);
-    }
-
-    if (pass == 1) {
-      *done = 1;
-      for (int i = 0; i < 6; i++) {
-        output[i] = string[i];
+    for (int i = 0; i < *num_targets * 20; i += 20) {
+      pass = 1;
+      for (int j = 0; j < 20; j++) {
+        // printf("%x vs %x\n", hash[j], target[j + i]);
+        pass = pass && (hash[j] == target[j + i]);
+      }
+      if (pass == 1) {
+        (*done)++;
+        for (int j = 0; j < 6; j++) {
+          output[((i / 20) * 6) + j] = string[j];
+        }
       }
     }
   }
 }
 
-int indices_to_string(int *indices, char *string, int len,
+int indices_to_string(int *indices, BYTE *string, int len,
                       __global char *alphabet) {
   int num_chars = 0;
   for (int i = 0; i < len; i++) {
