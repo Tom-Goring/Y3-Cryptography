@@ -5,7 +5,6 @@ const Home: React.FC = () => {
         <div>
             <h2>Cryptography</h2>
             <p>Each page will contain the work relevant to that week.</p>
-            <div style={{height: "500vh"}}/>
         </div>
     );
 }

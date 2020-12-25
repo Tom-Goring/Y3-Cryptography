@@ -196,6 +196,10 @@ form > button {
     margin-left: 1rem;
 }
 
+form > button:hover {
+    background-color: #b7b7b7;
+}
+
 .animation {
     animation-name: move;
     animation-duration: .4s;
