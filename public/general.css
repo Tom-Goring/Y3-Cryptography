@@ -187,7 +187,7 @@ blockquote {
     border-color: #0f7ef1;
 }
 
-form > button {
+.form-button {
     appearance: none;
     background-color: #ccc;
     border: none;
@@ -196,7 +196,7 @@ form > button {
     margin-left: 1rem;
 }
 
-form > button:hover {
+.form-button:hover {
     background-color: #b7b7b7;
 }
 

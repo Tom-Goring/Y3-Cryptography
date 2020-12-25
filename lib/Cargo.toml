@@ -15,7 +15,6 @@ name = "crypto-gui"
 path = "src/main.rs"
 
 [dependencies]
-iced = "0.1.1"
 itertools = "0.9.0"
 gcd = "2.0.1"
 num = "0.3.1"
@@ -24,3 +23,6 @@ rl-crypto = { version= "0.2.36", package = "rust-crypto" }
 num_cpus = "1.13.0"
 ocl = "0.19.3"
 hex = "0.4.2"
+actix-web = "3"
+actix-cors = "0.5.3"
+env_logger = "0.8.2"

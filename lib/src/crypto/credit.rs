@@ -33,11 +33,11 @@ pub fn verify_credit_card(credit_card_number: &str) -> Result<(), CreditCardVeri
     let even = integers.iter().step_by(2).map(|&d| m_mul(2, d, 9));
     let both: u32 = itertools::interleave(even, odd).sum();
 
-    return if both % 10 == 0 {
+    if both % 10 == 0 {
         Ok(())
     } else {
         Err(CreditCardVerificationError::InvalidCreditCard)
-    };
+    }
 }
 
 #[cfg(test)]

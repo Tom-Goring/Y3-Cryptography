@@ -1,7 +1,16 @@
+use std::fmt;
+
+#[derive(Debug)]
 pub enum ISBNVerificationError {
     InvalidDigitCount,
     NonValidISBN,
     InvalidDigitsFound,
+}
+
+impl fmt::Display for ISBNVerificationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 pub fn verify_isbn(isbn: &str) -> Result<(), ISBNVerificationError> {

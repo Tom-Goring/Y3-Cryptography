@@ -1,61 +1,81 @@
 import React from "react";
-import Cleave from "cleave.js/react";
 
 interface CCNProps {
     setCCN: Function
 }
 
-const CreditInput: React.FC<CCNProps> = (props: CCNProps) => {
-    return (
-        <Cleave
-            className={"form-field animation"}
-            placeholder="Enter CCN"
-            options={{blocks: [4, 4, 4, 4]}}
-            onChange={(event) => props.setCCN(event.target.rawValue)}
-            style={{textOverflow: "ellipsis"}}
-            minLength={16}
-            maxLength={16}
-            required={true}
-        />
-    )
-}
-
 const Week1: React.FC = () => {
     const [ISBN, setISBN] = React.useState("");
+    const [ISBNMessage, setISBNMessage] = React.useState("");
+    const [CCNMessage, setCCNMessage] = React.useState("");
     const [CCN, setCCN] = React.useState("");
 
     const onISBNChange = (e: any) => {
-        const re = /^[0-9\b]+$/;
-
-        if (e.target.value === '' || re.test(e.target.value)) {
-            setISBN(e.target.value);
-        }
+        setISBN(e.target.value);
     }
+
+    const submitISBN = (e: any) => {
+        e.preventDefault();
+        fetch(`http://127.0.0.1:8080/isbn/${ISBN}`).then((response) => {
+            response.text().then((text) => {
+                setISBNMessage(text);
+            });
+        });
+    }
+
+    const onCCNChange = (e: any) => {
+        setCCN(e.target.value);
+    }
+
+    const submitCCN = (e: any) => {
+        e.preventDefault();
+        console.log(CCN);
+        fetch(`http://127.0.0.1:8080/ccn/${CCN}`).then((response) => {
+            response.text().then((text) => {
+                setCCNMessage(text);
+            });
+        });
+    }
+
+    const clearISBN = (e: any) => {
+        e.preventDefault();
+        setISBN("");
+        setISBNMessage("");
+    }
+
+    const clearCCN = (e: any) => {
+        e.preventDefault();
+        setCCN("");
+        setCCNMessage("");
+    }
+
+    let re = "^(?=(?:\\D*\\d){10}(?:(?:\\D*\\d){3})?$)[\\d-]+$";
+    let re2 = "\\b\\d{4}(| |-)\\d{4}\\1\\d{4}\\1\\d{4}\\b";
 
     return (
         <div className={"content"}>
             <h3>Credit and ISBN Verification</h3>
             <p>This week's task is to verify given ISBN and credit card numbers.</p>
-            <form onSubmit={ (e) => {
-                e.preventDefault();
-                console.log(ISBN);
-            }}>
+            <form onSubmit={submitISBN}>
                 <h2>ISBN Code</h2>
                 <label>
-                    <input placeholder={"Enter ISBN"} className={"form-field animation"} type={"tel"} inputMode={"numeric"} value={ISBN} onChange={onISBNChange} minLength={10} maxLength={10} required={true}/>
+                    <input placeholder={"Enter ISBN"} className={"form-field animation"} type={"tel"}
+                           inputMode={"numeric"} value={ISBN} onChange={onISBNChange} required={true}/>
                 </label>
-                <button>Verify ISBN</button>
+                <button className={"form-button"}>Verify ISBN</button>
+                <button className={"form-button"} onClick={clearISBN}>Clear</button>
             </form>
-            <form onSubmit={(e) => {
-               e.preventDefault();
-               console.log(CCN);
-            }}>
+            <p>{ISBNMessage}</p>
+            <form onSubmit={submitCCN}>
                 <label>
                     <h2>Credit Card Number</h2>
-                    <CreditInput setCCN={setCCN}/>
+                    <input placeholder={"Enter CCN"} className={"form-field animation"} type={"tel"}
+                           inputMode={"numeric"} value={CCN} onChange={onCCNChange} required={true}/>
                 </label>
-                <button>Verify CCN</button>
+                <button className={"form-button"}>Verify CCN</button>
+                <button className={"form-button"} onClick={clearCCN}>Clear</button>
             </form>
+            <p>{CCNMessage}</p>
         </div>
     );
 }
