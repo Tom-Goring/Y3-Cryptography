@@ -60,15 +60,18 @@ const App: React.FC = () => {
   let currPage = routes.findIndex(route => route.path === location.pathname);
 
   let prevPageLink;
+  let mobilePrevPageLink;
   if (currPage !== 0) {
-    prevPageLink = <Link className={"mobile-nav-chapters previous"} to={routes[currPage - 1].path}><FontAwesomeIcon icon={faAngleLeft}/></Link>
+    prevPageLink = <Link className={"nav-chapters previous"} to={routes[currPage - 1].path}><FontAwesomeIcon icon={faAngleLeft}/></Link>;
+    mobilePrevPageLink = <Link className={"mobile-nav-chapters previous"} to={routes[currPage - 1].path}><FontAwesomeIcon icon={faAngleLeft}/></Link>;
   }
 
   let nextPageLink;
+  let mobileNextPageLink;
   if (currPage !== routes.length-1) {
-    nextPageLink = <Link className={"mobile-nav-chapters next"} to={routes[currPage + 1].path}><FontAwesomeIcon icon={faAngleRight}/></Link>
+    nextPageLink = <Link className={"nav-chapters next"} to={routes[currPage + 1].path}><FontAwesomeIcon icon={faAngleRight}/></Link>;
+    mobileNextPageLink = <Link className={"mobile-nav-chapters next"} to={routes[currPage + 1].path}><FontAwesomeIcon icon={faAngleRight}/></Link>;
   }
-
 
   return (
         <div className="App">
@@ -76,22 +79,26 @@ const App: React.FC = () => {
             <Navbar routes={routes} active={sidebarOpen}/>
             <div className={"page-wrapper"}>
               <div className={"page"}>
+                <div id={"menu-bar-hover-placeholder"}/>
                 <MenuBar setSideBarOpen={setSidebarOpen}/>
                 <div className={"content"}>
                   <main>
                     <div className={"page"}>
-                      <div id={"menu-bar-hover-placeholder"}/>
                       <Switch>
                         {Routes}
                       </Switch>
                     </div>
                   </main>
                   <nav className={"nav-wrapper"}>
-                    {prevPageLink !== undefined ? prevPageLink : ""}
-                    {nextPageLink !== undefined ? nextPageLink : ""}
+                    {mobilePrevPageLink !== undefined ? mobilePrevPageLink : ""}
+                    {mobileNextPageLink !== undefined ? mobileNextPageLink : ""}
                   </nav>
                 </div>
               </div>
+              <nav className={"nav-wide-wrapper"}>
+                {prevPageLink !== undefined ? prevPageLink : ""}
+                {nextPageLink !== undefined ? nextPageLink : ""}
+              </nav>
             </div>
           </div>
           </div>

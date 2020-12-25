@@ -16,7 +16,6 @@ const MenuBar: React.FC<MenuBarProps> = (props: MenuBarProps) => {
     const ref = React.useRef<HTMLDivElement>(null);
 
     React.useEffect(() => {
-
         const handleScroll = () => {
             let downwards = window.scrollY > scrollRef.current.previousHeight;
             scrollRef.current.previousHeight = window.scrollY;
