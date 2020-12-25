@@ -4,6 +4,8 @@ import {
   BrowserRouter as Router,
   Switch,
   Route,
+  Link,
+  useLocation,
 // @ts-ignore
 } from "react-router-dom";
 
@@ -17,6 +19,9 @@ import Week5 from "./pages/Week5";
 import Week6 from "./pages/Week6";
 import Week7 from "./pages/Week7";
 import MenuBar from "./components/MenuBar";
+
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faAngleLeft, faAngleRight } from '@fortawesome/free-solid-svg-icons'
 
 export interface RawRoute {
   path: string,
@@ -39,6 +44,7 @@ const routes: RawRoute[] = [
 
 const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
+  const location = useLocation();
 
   let Routes = [];
   for (let raw_route of routes) {
@@ -51,8 +57,20 @@ const App: React.FC = () => {
     }
   }
 
+  let currPage = routes.findIndex(route => route.path === location.pathname);
+
+  let prevPageLink;
+  if (currPage !== 0) {
+    prevPageLink = <Link className={"mobile-nav-chapters previous"} to={routes[currPage - 1].path}><FontAwesomeIcon icon={faAngleLeft}/></Link>
+  }
+
+  let nextPageLink;
+  if (currPage !== routes.length-1) {
+    nextPageLink = <Link className={"mobile-nav-chapters next"} to={routes[currPage + 1].path}><FontAwesomeIcon icon={faAngleRight}/></Link>
+  }
+
+
   return (
-      <Router>
         <div className="App">
           <div className={`light js ${sidebarOpen ? "sidebar-visible" : "sidebar-hidden"}`}>
             <Navbar routes={routes} active={sidebarOpen}/>
@@ -68,13 +86,24 @@ const App: React.FC = () => {
                       </Switch>
                     </div>
                   </main>
+                  <nav className={"nav-wrapper"}>
+                    {prevPageLink !== undefined ? prevPageLink : ""}
+                    {nextPageLink !== undefined ? nextPageLink : ""}
+                  </nav>
                 </div>
               </div>
             </div>
           </div>
           </div>
-      </Router>
   );
 }
 
-export default App;
+const AppWrapper: React.FC = () => {
+  return(
+      <Router>
+        <App/>
+      </Router>
+  )
+}
+
+export default AppWrapper;
