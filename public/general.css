@@ -51,20 +51,20 @@ h4, h5 { margin-top: 2em; }
     margin-top: 1em;
 }
 
-h1 a.header:target::before,
-h2 a.header:target::before,
-h3 a.header:target::before,
-h4 a.header:target::before {
+h1 header::before,
+h2 header::before,
+h3 header::before,
+h4 header::before {
     display: inline-block;
     content: "»";
     margin-left: -30px;
     width: 30px;
 }
 
-h1 a.header:target,
-h2 a.header:target,
-h3 a.header:target,
-h4 a.header:target {
+h1 .header,
+h2 .header,
+h3 .header,
+h4 .header {
     scroll-margin-top: calc(var(--menu-bar-height) + 0.5em);
 }
 
@@ -85,6 +85,7 @@ h4 a.header:target {
     padding: 0 15px 50px;
 }
 .content main {
+    /*margin-top: var(--menu-bar-height);*/
     margin-left: auto;
     margin-right: auto;
     max-width: var(--content-max-width);
@@ -95,12 +96,10 @@ h4 a.header:target {
 .content a { text-decoration: none; }
 .content a:hover { text-decoration: underline; }
 .content img { max-width: 100%; }
-.content .header:link,
-.content .header:visited {
+.content .header {
     color: var(--fg);
 }
-.content .header:link,
-.content .header:visited:hover {
+.content .header {
     text-decoration: none;
 }
 

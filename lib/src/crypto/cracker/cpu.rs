@@ -75,7 +75,7 @@ fn increment_indices(
 
         if new_value >= (alphabet_size) as i32 {
             carry = new_value / alphabet_size as i32;
-            new_value = new_value % alphabet_size as i32;
+            new_value %= alphabet_size as i32;
         } else {
             carry = 0;
         }
@@ -83,11 +83,11 @@ fn increment_indices(
         indices[position] = new_value;
     }
 
-    return if carry == 0 {
+    if carry == 0 {
         Ok(())
     } else {
         Err("Further increments would overflow")
-    };
+    }
 }
 
 fn spawn_worker_thread(
@@ -134,16 +134,13 @@ fn spawn_worker_thread_for_bch(
                 break;
             }
 
-            match crate::bch::encode_bch(&indices_to_string(&indices, &alphabet)) {
-                Ok(bch) => {
-                    sha.input_str(&bch);
-                    let hashed_password = sha.result_str();
-                    if target == Arc::from(hashed_password) {
-                        done.store(true, Ordering::SeqCst);
-                        result = Some(indices_to_string(&indices, &alphabet));
-                    }
+            if let Ok(bch) = crate::bch::encode_bch(&indices_to_string(&indices, &alphabet)) {
+                sha.input_str(&bch);
+                let hashed_password = sha.result_str();
+                if target == Arc::from(hashed_password) {
+                    done.store(true, Ordering::SeqCst);
+                    result = Some(indices_to_string(&indices, &alphabet));
                 }
-                Err(_) => {}
             }
             sha.reset();
         }
@@ -159,7 +156,7 @@ fn spawn_worker_threads(
     bch: bool,
 ) -> Vec<JoinHandle<Option<String>>> {
     let mut handles = vec![];
-    for thread in 0..1 {
+    for thread in 0..num_cpus::get() {
         let mut indices = create_index_array(if bch { 0 } else { -1 }, password_length);
         increment_indices(&mut indices, alphabet.len(), thread as i32).unwrap();
         if !bch {

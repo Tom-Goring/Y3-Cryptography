@@ -13,10 +13,9 @@ pub enum CodingResult {
 }
 
 pub fn encode_bch(string: &str) -> Result<String, CodingResult> {
-    let weights = [&D7[..], &D8[..], &D9[..], &D10[..]];
-    match calculate_digits(&weights, string, 6) {
+    match calculate_hamming_check_digits(string) {
         Ok(digits) => Ok(digits),
-        Err(error) => Err(CodingResult::EncodingError(error)),
+        Err(error) => Err(CodingResult::EncodingError(error.to_string())),
     }
 }
 

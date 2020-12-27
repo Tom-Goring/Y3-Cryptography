@@ -1,65 +1,107 @@
-use std::char;
-use std::ops::Add;
+use std::fmt::Formatter;
 
-pub const D7: [u32; 6] = [4, 10, 9, 2, 1, 7];
-pub const D8: [u32; 6] = [7, 8, 7, 1, 9, 6];
-pub const D9: [u32; 6] = [9, 1, 7, 8, 7, 7];
-pub const D10: [u32; 6] = [1, 2, 9, 10, 4, 1];
+/// Weights generated using a galois field as described in the optional course materials.
+const WEIGHTS: [[u32; 6]; 4] = [
+    [4, 10, 9, 2, 1, 7],
+    [7, 8, 7, 1, 9, 6],
+    [9, 1, 7, 8, 7, 7],
+    [1, 2, 9, 10, 4, 1],
+];
 
-pub const S1: [u32; 10] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-pub const S2: [u32; 10] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-pub const S3: [u32; 10] = [1, 4, 9, 5, 3, 3, 5, 9, 4, 1];
-pub const S4: [u32; 10] = [1, 8, 5, 9, 4, 7, 2, 6, 3, 10];
+const SYNDROME_WEIGHTS: [[u32; 10]; 4] = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    [1, 4, 9, 5, 3, 3, 5, 9, 4, 1],
+    [1, 8, 5, 9, 4, 7, 2, 6, 3, 10],
+];
 
-pub fn calculate_digit(weights: &[u32], input: &[u32], length: usize) -> Result<u32, &'static str> {
-    if input.len() != length {
-        println!("Input length does not equal length.");
-        return Err("Input length does not equal length.");
-    }
-    if weights.len() != length {
-        println!("Weights length does not equal length.");
-        return Err("Weights length does not equal length.");
-    }
-
-    Ok(weights
-        .iter()
-        .zip(input.iter())
-        .map(|(weight, digit)| (weight * digit))
-        .sum::<u32>()
-        % 11)
+#[derive(Debug, Copy, Clone)]
+pub enum HammingError {
+    InvalidDigit,
+    UnusableNumber,
+    InvalidLength(usize, usize),
 }
 
-pub fn calculate_digits(weights: &[&[u32]], input: &str, length: usize) -> Result<String, String> {
-    if input.len() != length {
-        return Err(format!(
-            "Input length too small - should be {} not {}!",
-            length,
-            input.len()
-        ));
+impl std::fmt::Display for HammingError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HammingError::InvalidDigit => {
+                write!(f, "Hamming code error: Invalid digit received in input")
+            }
+            HammingError::UnusableNumber => {
+                write!(f, "Hamming code error: Input is unusable")
+            }
+            HammingError::InvalidLength(required, actual) => {
+                write!(
+                    f,
+                    "Hamming code error: Input is of wrong length - given input is of \
+                length {} but a length of {} is required!",
+                    actual, required
+                )
+            }
+        }
     }
+}
 
-    let input_as_digits: Result<Vec<u32>, _> = input
+/// Calculates the check digits for a given input. An HammingCode error is returned if any of the
+/// check digits are 10 or if an input character is non-numeric. The result is not the entire
+/// string, just the resulting check digits.
+pub fn calculate_hamming_check_digits(input: &str) -> Result<String, HammingError> {
+    if input.len() != 6 {
+        return Err(HammingError::InvalidLength(6, input.len()));
+    }
+    match input
         .chars()
-        .map(|c| c.to_digit(10).ok_or("Invalid Digit"))
-        .collect();
-
-    let check_digits: Result<String, String> = match input_as_digits {
-        Ok(digit_vec) => weights
+        .map(|c| c.to_digit(10))
+        .collect::<Option<Vec<u32>>>()
+    {
+        Some(digits) => match WEIGHTS
             .iter()
             .map(|weights| {
-                char::from_digit(
-                    calculate_digit(*weights, &digit_vec[..], length).unwrap() as u32,
-                    10,
-                )
-                .ok_or_else(|| format!("Inputted string cannot be encoded using bch(10,6)"))
+                weights
+                    .iter()
+                    .zip(digits.iter())
+                    .map(|(weight, digit)| weight * digit)
+                    .sum::<u32>()
+                    % 11
             })
-            .collect(),
-        Err(error) => Err(error.into()),
-    };
+            .map(|check_digit| std::char::from_digit(check_digit, 10))
+            .collect::<Option<String>>()
+        {
+            Some(check_digits) => Ok(check_digits),
+            None => Err(HammingError::UnusableNumber),
+        },
+        None => Err(HammingError::InvalidDigit),
+    }
+}
 
-    match check_digits {
-        Ok(digits) => Ok(String::from(input).add(&digits)),
-        Err(error) => Err(error),
+pub fn generate_syndromes(input: &str) -> Result<String, HammingError> {
+    if input.len() != 10 {
+        return Err(HammingError::InvalidLength(10, input.len()));
+    }
+
+    match input
+        .chars()
+        .map(|c| c.to_digit(10))
+        .collect::<Option<Vec<u32>>>()
+    {
+        Some(digits) => match SYNDROME_WEIGHTS
+            .iter()
+            .map(|weights| {
+                weights
+                    .iter()
+                    .zip(digits.iter())
+                    .map(|(weight, digit)| weight * digit)
+                    .sum::<u32>()
+                    % 11
+            })
+            .map(|syndrome_digit| std::char::from_digit(syndrome_digit, 10))
+            .collect::<Option<String>>()
+        {
+            Some(syndrome_vector) => Ok(syndrome_vector),
+            None => Err(HammingError::UnusableNumber),
+        },
+        None => Err(HammingError::InvalidDigit),
     }
 }
 
@@ -67,42 +109,44 @@ pub fn calculate_digits(weights: &[&[u32]], input: &str, length: usize) -> Resul
 mod tests {
     use super::*;
     #[test]
-    pub fn check_digits_successful() {
-        let weights = [&D7[..], &D8[..], &D9[..], &D10[..]];
-
-        let inputs = vec!["000001", "000002", "000010", "000011"];
-
-        let results = vec!["0000017671", "0000023132", "0000101974", "0000118435"];
-
-        inputs.iter().enumerate().for_each(|(i, _)| {
-            assert_eq!(
-                &calculate_digits(&weights[..], &String::from(inputs[i]), 6).unwrap(),
-                results[i]
-            )
-        });
+    pub fn hamming_check_digits_success() {
+        let inputs = ["000001", "000002", "000010", "000011"];
+        let results = ["7671", "3132", "1974", "8435"];
+        for (input, proper) in inputs.iter().zip(results.iter()) {
+            let result = calculate_hamming_check_digits(input);
+            match result.ok() {
+                Some(output) => assert_eq!(output, String::from(*proper)),
+                None => panic!(),
+            }
+        }
     }
 
     #[test]
-    pub fn check_digits_failure() {
-        let weights = [&D7[..], &D8[..], &D9[..], &D10[..]];
-        let input = "000003";
-
-        calculate_digits(&weights, &String::from(input), 6).unwrap_err();
+    pub fn hamming_check_digits_unusable_number() {
+        let result = calculate_hamming_check_digits("000003");
+        if result.is_ok() {
+            panic!()
+        }
     }
 
     #[test]
-    pub fn check_syndrome_generation_success() {
-        let weights = [&S1[..], &S2[..], &S3[..], &S4[..]];
-        let input = "0000118435";
+    pub fn hamming_check_digits_invalid_characters() {
+        let result = calculate_hamming_check_digits("flnefk");
+        if result.is_ok() {
+            panic!()
+        }
+    }
 
-        let digits = calculate_digits(&weights, &String::from(input), 10).unwrap();
-
-        assert_eq!(digits, String::from("00001184350000"));
-
-        let input = "8899880747";
-
-        let digits = calculate_digits(&weights, &String::from(input), 10).unwrap();
-
-        assert_eq!(digits, String::from("88998807472733"));
+    #[test]
+    pub fn syndrome_vector_generation_success() {
+        let inputs = ["0000118435", "8899880747"];
+        let results = ["0000", "2733"];
+        for (input, proper) in inputs.iter().zip(results.iter()) {
+            let result = generate_syndromes(input);
+            match result.clone().ok() {
+                Some(output) => assert_eq!(output, String::from(*proper)),
+                None => panic!(println!("{}", result.unwrap())),
+            }
+        }
     }
 }

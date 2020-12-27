@@ -83,11 +83,9 @@ const App: React.FC = () => {
                 <MenuBar setSideBarOpen={setSidebarOpen}/>
                 <div className={"content"}>
                   <main>
-                    <div className={"page"}>
                       <Switch>
                         {Routes}
                       </Switch>
-                    </div>
                   </main>
                   <nav className={"nav-wrapper"}>
                     {mobilePrevPageLink !== undefined ? mobilePrevPageLink : ""}

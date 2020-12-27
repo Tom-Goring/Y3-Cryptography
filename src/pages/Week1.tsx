@@ -1,9 +1,5 @@
 import React from "react";
 
-interface CCNProps {
-    setCCN: Function
-}
-
 const Week1: React.FC = () => {
     const [ISBN, setISBN] = React.useState("");
     const [ISBNMessage, setISBNMessage] = React.useState("");
@@ -49,12 +45,9 @@ const Week1: React.FC = () => {
         setCCNMessage("");
     }
 
-    let re = "^(?=(?:\\D*\\d){10}(?:(?:\\D*\\d){3})?$)[\\d-]+$";
-    let re2 = "\\b\\d{4}(| |-)\\d{4}\\1\\d{4}\\1\\d{4}\\b";
-
     return (
         <div className={"content"}>
-            <h3>Credit and ISBN Verification</h3>
+            <h1>Credit and ISBN Verification</h1>
             <p>This week's task is to verify given ISBN and credit card numbers.</p>
             <form onSubmit={submitISBN}>
                 <h2>ISBN Code</h2>
