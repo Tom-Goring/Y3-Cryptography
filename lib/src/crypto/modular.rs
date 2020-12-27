@@ -1,10 +1,25 @@
+#![allow(dead_code)]
+
 use gcd::Gcd;
 use num::Integer;
 use std::fmt::{Display, Formatter};
 use std::{fmt, ops};
 
-// TODO: replace assertions with results?
-// TODO: replace i32 with T
+pub trait Modulo {
+    fn modulo(self, modulus: i32) -> Modular;
+}
+
+impl Modulo for i32 {
+    fn modulo(self, modulus: i32) -> Modular {
+        Modular::new(self, modulus)
+    }
+}
+
+impl Modulo for u32 {
+    fn modulo(self, modulus: i32) -> Modular {
+        Modular::new(self as i32, modulus)
+    }
+}
 
 #[derive(Copy, Clone, Debug)]
 pub struct Modular {
@@ -21,15 +36,23 @@ impl Modular {
         }
     }
 
-    pub fn try_div(&self, rhs: Self) -> Result<Self, &str> {
+    pub fn v(&self) -> i32 {
+        self.value
+    }
+
+    pub fn m(&self) -> i32 {
+        self.modulo
+    }
+
+    pub fn try_div(&self, rhs: Self) -> Option<Self> {
         if self.modulo != rhs.modulo {
-            return Err("Attempted division by a value of differing modulo");
+            return None;
         };
         if rhs.value.gcd(&self.modulo) != 1 {
-            return Err("The RHS value did not satisfy the restraint of having a GCD of 1 with the LHS modulo.");
+            return None;
         };
         if rhs.value == 0 {
-            return Err("Attempted divide by zero");
+            return None;
         }
 
         let mut acc = self.value;
@@ -42,19 +65,19 @@ impl Modular {
             }
         }
 
-        Ok(Self::new(acc / rhs.value, self.modulo))
+        Some(Self::new(acc / rhs.value, self.modulo))
     }
 
-    pub fn sqrt(&self) -> Result<Self, ()> {
+    pub fn sqrt(&self) -> Option<Self> {
         for x in 1..self.modulo {
             if Modular::new(x, self.modulo).pow(2) == self.value {
-                return Ok(Self {
+                return Some(Self {
                     value: x,
                     modulo: self.modulo,
                 });
             }
         }
-        return Err(());
+        return None;
     }
 
     pub fn pow(self, power: i32) -> Self {

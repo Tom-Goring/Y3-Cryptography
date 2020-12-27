@@ -75,7 +75,7 @@ pub fn calculate_hamming_check_digits(input: &str) -> Result<String, HammingErro
     }
 }
 
-pub fn generate_syndromes(input: &str) -> Result<String, HammingError> {
+pub fn generate_syndromes(input: &str) -> Result<Vec<u32>, HammingError> {
     if input.len() != 10 {
         return Err(HammingError::InvalidLength(10, input.len()));
     }
@@ -85,7 +85,7 @@ pub fn generate_syndromes(input: &str) -> Result<String, HammingError> {
         .map(|c| c.to_digit(10))
         .collect::<Option<Vec<u32>>>()
     {
-        Some(digits) => match SYNDROME_WEIGHTS
+        Some(digits) => Ok(SYNDROME_WEIGHTS
             .iter()
             .map(|weights| {
                 weights
@@ -95,12 +95,7 @@ pub fn generate_syndromes(input: &str) -> Result<String, HammingError> {
                     .sum::<u32>()
                     % 11
             })
-            .map(|syndrome_digit| std::char::from_digit(syndrome_digit, 10))
-            .collect::<Option<String>>()
-        {
-            Some(syndrome_vector) => Ok(syndrome_vector),
-            None => Err(HammingError::UnusableNumber),
-        },
+            .collect::<Vec<u32>>()),
         None => Err(HammingError::InvalidDigit),
     }
 }
@@ -140,12 +135,12 @@ mod tests {
     #[test]
     pub fn syndrome_vector_generation_success() {
         let inputs = ["0000118435", "8899880747"];
-        let results = ["0000", "2733"];
+        let results = [[0, 0, 0, 0], [2,7,3,3]];
         for (input, proper) in inputs.iter().zip(results.iter()) {
             let result = generate_syndromes(input);
             match result.clone().ok() {
-                Some(output) => assert_eq!(output, String::from(*proper)),
-                None => panic!(println!("{}", result.unwrap())),
+                Some(output) => assert_eq!(output, proper),
+                None => panic!(println!("{:?}", result.unwrap())),
             }
         }
     }

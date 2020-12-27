@@ -1,162 +1,112 @@
 #![allow(dead_code)]
 use super::hamming::*;
-use crate::crypto::modular::Modular;
-use std::char;
+use super::modular::*;
+use BCHError::*;
+use TripleErrorReason::*;
 
 #[derive(Debug)]
-pub enum CodingResult {
-    EncodingError(String),
-    InputError(String),
-    SingleError(String, i32, i32),
-    DoubleError(String, (i32, i32), (i32, i32)),
-    TripleError(String),
+pub enum BCHError {
+    InvalidInput(HammingError),
+    SingleError(Vec<u32>, u32, u32),
+    DoubleError(Vec<u32>, (u32, u32), (u32, u32)),
+    TripleError(TripleErrorReason),
 }
 
-pub fn encode_bch(string: &str) -> Result<String, CodingResult> {
+#[derive(Debug)]
+pub enum TripleErrorReason {
+    DivisionError,
+    ErrorAtPositionZero,
+    NoValidRoots,
+    ValueCorrectedToTen
+}
+
+pub fn encode_bch(string: &str) -> Result<String, BCHError> {
     match calculate_hamming_check_digits(string) {
-        Ok(digits) => Ok(digits),
-        Err(error) => Err(CodingResult::EncodingError(error.to_string())),
+        Ok(digits) => Ok(format!("{}{}", string, digits)),
+        Err(error) => Err(BCHError::InvalidInput(error)),
     }
 }
 
-pub fn decode_bch(string: &str) -> Result<String, CodingResult> {
-    if string.len() != 10 {
-        return Err(CodingResult::InputError("Input is of wrong length".into()));
-    }
-
-    let integers: Vec<i32> = string
+pub fn verify_bch_input(input: &str) -> Result<(), BCHError> {
+    let mut ints = input
         .chars()
-        .map(|c| {
-            c.to_digit(10).map_or_else(
-                || {
-                    Err(CodingResult::InputError(
-                        "String contains a non numeric character".into(),
-                    ))
-                },
-                |i| Ok(i as i32),
-            )
-        })
-        .collect::<Result<Vec<i32>, _>>()?;
+        .map(|c| c.to_digit(10))
+        .collect::<Option<Vec<u32>>>()
+        .ok_or(InvalidInput(HammingError::InvalidDigit))?;
 
-    let syndrome_vector = (0..=3)
-        .into_iter()
-        .map(|digit| {
-            Modular::new(
-                integers
-                    .iter()
-                    .zip(0..)
-                    .map(|(&x, i)| x * (i as i32 + 1).pow(digit))
-                    .sum::<i32>(),
-                11,
-            )
-        })
-        .collect::<Vec<Modular>>();
+    let sv: Vec<Modular> = match super::hamming::generate_syndromes(input) {
+        Ok(sv) => sv.iter().map(|&d| d.modulo(11)).collect::<Vec<Modular>>(),
+        Err(err) => return Err(BCHError::InvalidInput(err)),
+    };
 
-    if syndrome_vector == [0, 0, 0, 0] {
-        return Ok(string.into());
+    if sv == [0, 0, 0, 0] {
+        return Ok(());
     }
 
-    let p = syndrome_vector[1].pow(2) - syndrome_vector[0] * syndrome_vector[2];
-    let q = syndrome_vector[0] * syndrome_vector[3] - syndrome_vector[1] * syndrome_vector[2];
-    let r = syndrome_vector[2].pow(2) - syndrome_vector[1] * syndrome_vector[3];
+    let (p, q, r) = {
+        (
+            sv[1].pow(2) - sv[0] * sv[2],
+            sv[0] * sv[3] - sv[1] * sv[2],
+            sv[2].pow(2) - sv[1] * sv[3],
+        )
+    };
 
-    return if p.value() + q.value() + r.value() == 0 {
-        let position = match syndrome_vector[1].try_div(syndrome_vector[0]) {
-            Ok(res) => res,
-            Err(err) => return Err(CodingResult::TripleError(err.into())),
-        };
+    println!("{:?}", (p, q, r));
 
-        let magnitude = syndrome_vector[0];
-
-        if position == 0 {
-            return Err(CodingResult::TripleError(
-                "Error was detected at position zero!".into(),
-            ));
-        }
-
-        let correct_digit = Modular::new(integers[position.value() as usize - 1], 11) - magnitude;
-
-        let mut new_integers = integers.clone();
-        new_integers[position.value() as usize - 1] = correct_digit.value();
-
-        let output = new_integers
-            .iter()
-            .map(|&d| char::from_digit(d as u32, 10).unwrap())
-            .collect::<String>();
-
-        Err(CodingResult::SingleError(
-            output,
-            position.value(),
-            magnitude.value(),
-        ))
-    } else {
-        let pre_root = Modular::new(q.value().pow(2) - (4 * p.value() * r.value()), 11);
-
-        let root = match pre_root.sqrt() {
-            Ok(root) => root,
-            Err(_) => {
-                return Err(CodingResult::TripleError(
-                    "Q^2 - 4PR did not have a valid root!".into(),
-                ))
+    return match (p.v(), q.v(), r.v()) {
+        (0, 0, 0) => {
+            let position = sv[1].try_div(sv[0]).ok_or(TripleError(DivisionError))?;
+            let magnitude = sv[0];
+            if position == 0 {
+                return Err(TripleError(ErrorAtPositionZero));
             }
-        };
+            let correct_digit = (ints[position.value() as usize - 1] as i32).modulo(11) - magnitude;
+            ints[position.v() as usize - 1] = correct_digit.v() as u32;
 
-        let position1 = match (root - q).try_div(p * Modular::new(2, 11)) {
-            Ok(res) => res,
-            Err(err) => return Err(CodingResult::TripleError(err.into())),
-        };
-
-        let position2 = match (Modular::new(0, 11) - q - root).try_div(p * Modular::new(2, 11)) {
-            Ok(res) => res,
-            Err(err) => return Err(CodingResult::TripleError(err.into())),
-        };
-
-        if position1 == 0 || position2 == 0 {
-            return Err(CodingResult::TripleError(
-                "Error was detected at position zero!".into(),
-            ));
+            Err(SingleError(ints, position.v() as u32, magnitude.v() as u32))
         }
+        _ => {
+            let root = (q.v().pow(2) - (4 * p.v() * r.v()))
+                .modulo(11)
+                .sqrt()
+                .ok_or(TripleError(NoValidRoots))?;
 
-        let magnitude2 = match (position1 * syndrome_vector[0] - syndrome_vector[1])
-            .try_div(position1 - position2)
-        {
-            Ok(res) => res,
-            Err(err) => return Err(CodingResult::TripleError(err.into())),
-        };
+            let pos1 = (root - q).try_div(p * 2.modulo(11)).ok_or(TripleError(DivisionError))?;
+            let pos2 = (0.modulo(11) - q - root)
+                .try_div(p * 2.modulo(11))
+                .ok_or(TripleError(DivisionError))?;
 
-        let magnitude1 = syndrome_vector[0] - magnitude2;
+            if pos1 == 0 || pos2 == 0 {
+                return Err(TripleError(ErrorAtPositionZero));
+            };
 
-        let mut new_integers = integers.clone();
+            let mag2 = (pos1 * sv[0] - sv[1])
+                .try_div(pos1 - pos2)
+                .ok_or(TripleError(DivisionError))?;
 
-        let corrected1 = Modular::new(integers[position1.value() as usize - 1], 11)
-            + (Modular::new(11, 11) - magnitude1);
-        let corrected2 = Modular::new(integers[position2.value() as usize - 1], 11)
-            + (Modular::new(11, 11) - magnitude2);
+            let mag1 = sv[0] - mag2;
 
-        new_integers[position1.value() as usize - 1] = corrected1.value();
-        new_integers[position2.value() as usize - 1] = corrected2.value();
+            println!("pos1: {}; pos2: {}", pos1, pos2);
+            println!("mag1: {}; mag2: {}", mag1, mag2);
 
-        let output: Result<String, CodingResult> = new_integers
-            .iter()
-            .map(|&d| {
-                char::from_digit(d as u32, 10).map_or_else(
-                    || {
-                        Err(CodingResult::TripleError(
-                            "Corrected a digit into 10".into(),
-                        ))
-                    },
-                    |c| Ok(c),
-                )
-            })
-            .collect();
+            println!("{:?}", ints);
 
-        match output {
-            Ok(output) => Err(CodingResult::DoubleError(
-                output,
-                (position1.value(), position2.value()),
-                (magnitude1.value(), magnitude2.value()),
-            )),
-            Err(error) => Err(error),
+            ints[pos1.v() as usize - 1] = (ints[pos1.v() as usize - 1] + (11.modulo(11) - mag1).v() as u32)
+                .modulo(11)
+                .v() as u32;
+            ints[pos2.v() as usize - 1] = (ints[pos2.v() as usize - 1] + (11.modulo(11) - mag2).v() as u32)
+                .modulo(11)
+                .v() as u32;
+
+            if ints.iter().any(|&elem| elem > 9) {
+                return Err(TripleError(ValueCorrectedToTen))
+            }
+
+            Err(DoubleError(
+                ints,
+                (pos1.v() as u32, pos2.v() as u32),
+                (mag1.v() as u32, mag2.v() as u32),
+            ))
         }
     };
 }
@@ -165,39 +115,37 @@ pub fn decode_bch(string: &str) -> Result<String, CodingResult> {
 mod tests {
     use super::*;
     #[test]
-    pub fn bch_success() {
-        let x = decode_bch("3745195876").unwrap();
-        assert_eq!(&x, "3745195876");
+    pub fn validate_correct_inputs() {
+        verify_bch_input("3745195876").unwrap();
     }
-
     #[test]
-    pub fn bch_single_error() {
-        let y = decode_bch("3945195876").unwrap_err();
+    pub fn correct_single_error() {
+        let y = verify_bch_input("3945195876").unwrap_err();
         match y {
-            CodingResult::SingleError(output, pos, mag) => {
-                assert_eq!((output.as_str(), pos, mag), ("3745195876", 2, 2))
+            SingleError(output, pos, mag) => {
+                assert_eq!((output, pos, mag), (vec![3, 7, 4, 5, 1, 9, 5, 8, 7, 6], 2, 2))
             }
             err => panic!("Wrong error type returned. Error was: {:?}", err),
         }
     }
 
     #[test]
-    pub fn bch_double_error() {
+    pub fn correct_double_errors() {
         let inputs = vec![
-            ("3715195076", "3745195876", (8, 3), (3, 8)),
-            ("0743195876", "3745195876", (4, 1), (9, 8)),
-            ("3745195840", "3745195876", (10, 9), (5, 8)),
-            ("8745105876", "3745195876", (6, 1), (2, 5)),
-            ("3745102876", "3745195876", (6, 7), (2, 8)),
-            ("1145195876", "3745195876", (1, 2), (9, 5)),
-            ("3745191976", "3745195876", (8, 7), (1, 7)),
-            ("3745190872", "3745195876", (7, 10), (6, 7)),
+            ("3715195076", vec![3, 7, 4, 5, 1, 9, 5, 8, 7, 6], (8, 3), (3, 8)),
+            ("0743195876", vec![3, 7, 4, 5, 1, 9, 5, 8, 7, 6], (4, 1), (9, 8)),
+            ("3745195840", vec![3, 7, 4, 5, 1, 9, 5, 8, 7, 6], (10, 9), (5, 8)),
+            ("8745105876", vec![3, 7, 4, 5, 1, 9, 5, 8, 7, 6], (6, 1), (2, 5)),
+            ("3745102876", vec![3, 7, 4, 5, 1, 9, 5, 8, 7, 6], (6, 7), (2, 8)),
+            ("1145195876", vec![3, 7, 4, 5, 1, 9, 5, 8, 7, 6], (1, 2), (9, 5)),
+            ("3745191976", vec![3, 7, 4, 5, 1, 9, 5, 8, 7, 6], (8, 7), (1, 7)),
+            ("3745190872", vec![3, 7, 4, 5, 1, 9, 5, 8, 7, 6], (7, 10), (6, 7)),
         ];
 
         inputs.iter().for_each(|row| {
-            let result = decode_bch(row.0).unwrap_err();
+            let result = verify_bch_input(row.0).unwrap_err();
             match result {
-                CodingResult::DoubleError(output, pos, mag) => {
+                DoubleError(output, pos, mag) => {
                     assert_eq!(row.1, output);
                     assert_eq!(row.2, (pos));
                     assert_eq!(row.3, (mag));
@@ -208,7 +156,7 @@ mod tests {
     }
 
     #[test]
-    pub fn bch_triple_error() {
+    pub fn warn_on_triple_error() {
         let inputs = vec![
             "1115195876",
             "2745795878",
@@ -225,10 +173,10 @@ mod tests {
         ];
 
         inputs.iter().for_each(|row| {
-            let result = decode_bch(row).unwrap_err();
+            let result = verify_bch_input(row).unwrap_err();
             match result {
-                CodingResult::TripleError(_) => {}
-                _ => panic!("Wrong error type returned"),
+                TripleError(_) => {}
+                _ => panic!("Wrong error type returned - {:?}", result),
             }
         });
     }

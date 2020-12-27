@@ -20,21 +20,23 @@ pub fn crack(
     bch: bool,
 ) -> Option<String> {
     let handles = spawn_worker_threads(
-        Arc::new(target.clone()),
+        Arc::new(target.to_string()),
         &password_alphabet,
         password_length,
         Arc::new(AtomicBool::from(false)),
         bch,
     );
 
-    let solution = handles
+    let solution: Vec<String> = handles
         .into_iter()
         .map(|h| h.join().unwrap())
         .filter(|h| h.is_some())
         .map(|o| o.unwrap())
-        .last();
+        .collect();
 
-    Some(solution.unwrap())
+    println!("{:?}", solution);
+
+    Some(solution.last().unwrap().clone())
 }
 
 fn create_index_array(min_index: i32, max_length: u32) -> Box<[i32]> {
@@ -100,7 +102,7 @@ fn spawn_worker_thread(
     let mut sha = Sha1::new();
     thread::spawn(move || {
         loop {
-            if increment_indices(&mut indices, alphabet.len(), 1 as i32).is_err()
+            if increment_indices(&mut indices, alphabet.len(), num_cpus::get() as i32).is_err()
                 || done.load(Ordering::SeqCst)
             {
                 break;
@@ -128,12 +130,6 @@ fn spawn_worker_thread_for_bch(
     let mut sha = Sha1::new();
     thread::spawn(move || {
         loop {
-            if increment_indices(&mut indices, alphabet.len(), 1 as i32).is_err()
-                || done.load(Ordering::SeqCst)
-            {
-                break;
-            }
-
             if let Ok(bch) = crate::bch::encode_bch(&indices_to_string(&indices, &alphabet)) {
                 sha.input_str(&bch);
                 let hashed_password = sha.result_str();
@@ -143,6 +139,12 @@ fn spawn_worker_thread_for_bch(
                 }
             }
             sha.reset();
+
+            if increment_indices(&mut indices, alphabet.len(), num_cpus::get() as i32).is_err()
+                || done.load(Ordering::SeqCst)
+            {
+                break;
+            }
         }
         result
     })
@@ -159,6 +161,7 @@ fn spawn_worker_threads(
     for thread in 0..num_cpus::get() {
         let mut indices = create_index_array(if bch { 0 } else { -1 }, password_length);
         increment_indices(&mut indices, alphabet.len(), thread as i32).unwrap();
+        // println!("Initial value in thread {}: {}", thread, indices_to_string(&indices, &alphabet));
         if !bch {
             handles.push(spawn_worker_thread(
                 done.clone(),
@@ -190,8 +193,16 @@ mod tests {
 
     #[test]
     pub fn simple_bch_crack() {
+        let hash = "4586580521292b61185246bbac71853c46fe5b17";
+        let password = crack(&String::from(hash), 6, &BCH_ALPHABET, true).unwrap();
+        assert_eq!(password, "000001");
+
         let hash = "902608824fae2a1918d54d569d20819a4288a4e4";
         let password = crack(&String::from(hash), 6, &BCH_ALPHABET, true).unwrap();
         assert_eq!(password, "000011");
+
+        let hash = "5b8f495b7f02b62eb228c5dbece7c2f81b60b9a3";
+        let password = crack(&String::from(hash), 6, &BCH_ALPHABET, true).unwrap();
+        println!("{}", password);
     }
 }
