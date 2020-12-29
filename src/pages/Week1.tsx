@@ -46,7 +46,7 @@ const Week1: React.FC = () => {
     }
 
     return (
-        <div className={"content"}>
+        <div>
             <h1>Credit and ISBN Verification</h1>
             <p>This week's task is to verify given ISBN and credit card numbers.</p>
             <form onSubmit={submitISBN}>

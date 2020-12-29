@@ -1,3 +1,4 @@
+use serde::Serialize;
 use std::fmt::Formatter;
 
 /// Weights generated using a galois field as described in the optional course materials.
@@ -15,7 +16,7 @@ const SYNDROME_WEIGHTS: [[u32; 10]; 4] = [
     [1, 8, 5, 9, 4, 7, 2, 6, 3, 10],
 ];
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize)]
 pub enum HammingError {
     InvalidDigit,
     UnusableNumber,
@@ -50,11 +51,7 @@ pub fn calculate_hamming_check_digits(input: &str) -> Result<String, HammingErro
     if input.len() != 6 {
         return Err(HammingError::InvalidLength(6, input.len()));
     }
-    match input
-        .chars()
-        .map(|c| c.to_digit(10))
-        .collect::<Option<Vec<u32>>>()
-    {
+    match input.chars().map(|c| c.to_digit(10)).collect::<Option<Vec<u32>>>() {
         Some(digits) => match WEIGHTS
             .iter()
             .map(|weights| {
@@ -80,11 +77,7 @@ pub fn generate_syndromes(input: &str) -> Result<Vec<u32>, HammingError> {
         return Err(HammingError::InvalidLength(10, input.len()));
     }
 
-    match input
-        .chars()
-        .map(|c| c.to_digit(10))
-        .collect::<Option<Vec<u32>>>()
-    {
+    match input.chars().map(|c| c.to_digit(10)).collect::<Option<Vec<u32>>>() {
         Some(digits) => Ok(SYNDROME_WEIGHTS
             .iter()
             .map(|weights| {
@@ -135,7 +128,7 @@ mod tests {
     #[test]
     pub fn syndrome_vector_generation_success() {
         let inputs = ["0000118435", "8899880747"];
-        let results = [[0, 0, 0, 0], [2,7,3,3]];
+        let results = [[0, 0, 0, 0], [2, 7, 3, 3]];
         for (input, proper) in inputs.iter().zip(results.iter()) {
             let result = generate_syndromes(input);
             match result.clone().ok() {

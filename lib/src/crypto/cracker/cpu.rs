@@ -7,18 +7,30 @@ use rl_crypto::digest::Digest;
 use rl_crypto::sha1::Sha1;
 
 pub const ALPHABET: [char; 36] = [
-    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
-    't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
+    'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 ];
 
 pub const BCH_ALPHABET: [char; 10] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
-pub fn crack(
-    target: &String,
-    password_length: u32,
-    password_alphabet: &'static [char],
-    bch: bool,
-) -> Option<String> {
+pub fn crack_bch(inputs: &[&str]) -> Option<Vec<String>> {
+    println!("{:?}", inputs);
+    let mut results: Vec<String> = Vec::new();
+    for &input in inputs.iter() {
+        println!("Input: {}", input);
+        if let Some(bch_code) = crack(&String::from(input), 6, &BCH_ALPHABET, true) {
+            results.push(bch_code);
+        }
+    }
+
+    if results.is_empty() {
+        None
+    } else {
+        Some(results)
+    }
+}
+
+pub fn crack(target: &String, password_length: u32, password_alphabet: &'static [char], bch: bool) -> Option<String> {
     let handles = spawn_worker_threads(
         Arc::new(target.to_string()),
         &password_alphabet,
@@ -36,7 +48,11 @@ pub fn crack(
 
     println!("{:?}", solution);
 
-    Some(solution.last().unwrap().clone())
+    return if solution.is_empty() {
+        None
+    } else {
+        Some(solution.last().unwrap().clone())
+    }
 }
 
 fn create_index_array(min_index: i32, max_length: u32) -> Box<[i32]> {
@@ -55,11 +71,7 @@ fn indices_to_string(indices: &Box<[i32]>, alphabet: &[char]) -> String {
 }
 
 #[inline]
-fn increment_indices(
-    indices: &mut Box<[i32]>,
-    alphabet_size: usize,
-    amount: i32,
-) -> Result<(), &'static str> {
+fn increment_indices(indices: &mut Box<[i32]>, alphabet_size: usize, amount: i32) -> Result<(), &'static str> {
     if amount == 0 {
         return Ok(());
     }
@@ -204,5 +216,16 @@ mod tests {
         let hash = "5b8f495b7f02b62eb228c5dbece7c2f81b60b9a3";
         let password = crack(&String::from(hash), 6, &BCH_ALPHABET, true).unwrap();
         println!("{}", password);
+    }
+
+    #[test]
+    pub fn bch_crack() {
+        let hashes = [
+            "4586580521292b61185246bbac71853c46fe5b17",
+            "902608824fae2a1918d54d569d20819a4288a4e4",
+            "5b8f495b7f02b62eb228c5dbece7c2f81b60b9a3",
+        ];
+        let codes = crack_bch(&hashes).unwrap();
+        assert_eq!(codes.len(), 3);
     }
 }

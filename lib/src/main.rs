@@ -1,18 +1,8 @@
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
-use actix_web::{get, post, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use crypto::credit::CreditCardVerificationError;
 use crypto::isbn::ISBNVerificationError;
-
-#[get("/")]
-async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
-}
-
-#[post("/echo")]
-async fn echo(req_body: String) -> impl Responder {
-    HttpResponse::Ok().body(req_body)
-}
 
 async fn isbn(req: HttpRequest) -> impl Responder {
     let x: String = req.match_info().get("isbn").unwrap().parse().unwrap();
@@ -55,6 +45,64 @@ async fn hamming_syndrome_vector(req: HttpRequest) -> impl Responder {
     })
 }
 
+async fn bch(req: HttpRequest) -> impl Responder {
+    let input = req.match_info().get("bch").unwrap();
+    HttpResponse::Ok().body(match crypto::bch::verify_bch_input(input) {
+        Ok(_) => format!("{} is a valid BCH code with no errors!", input),
+        Err(error) => error.to_string(),
+    })
+}
+
+async fn sha(req: HttpRequest) -> impl Responder {
+    let input = req.match_info().get("input").unwrap();
+    HttpResponse::Ok().body(crypto::hash::sha1(input))
+}
+
+use futures_util::StreamExt;
+
+const MAX_SIZE: usize = 262_144;
+async fn crack_normal(mut payload: web::Payload) -> impl Responder {
+    let mut body = web::BytesMut::new();
+    while let Some(chunk) = payload.next().await {
+        let chunk = chunk.unwrap();
+        if (body.len() + chunk.len()) > MAX_SIZE {
+            panic!("Couldn't process incoming json");
+        }
+        body.extend_from_slice(&chunk);
+    }
+
+    match serde_json::from_slice::<Vec<String>>(&body) {
+        Ok(hashes) => HttpResponse::Ok().json(
+            match crypto::gpu::crack(&hashes.iter().map(std::ops::Deref::deref).collect::<Vec<&str>>()) {
+                None => Vec::new(),
+                Some(passwords) => passwords,
+            },
+        ),
+        Err(_) => HttpResponse::BadRequest().finish(),
+    }
+}
+
+async fn crack_bch(mut payload: web::Payload) -> impl Responder {
+    let mut body = web::BytesMut::new();
+    while let Some(chunk) = payload.next().await {
+        let chunk = chunk.unwrap();
+        if (body.len() + chunk.len()) > MAX_SIZE {
+            panic!("Couldn't process incoming json");
+        }
+        body.extend_from_slice(&chunk);
+    }
+
+    match serde_json::from_slice::<Vec<String>>(&body) {
+        Ok(hashes) => HttpResponse::Ok().json(
+            match crypto::cpu::crack_bch(&hashes.iter().map(std::ops::Deref::deref).collect::<Vec<&str>>()) {
+                None => Vec::new(),
+                Some(passwords) => passwords,
+            },
+        ),
+        Err(_) => HttpResponse::BadRequest().finish(),
+    }
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_web=info");
@@ -63,11 +111,15 @@ async fn main() -> std::io::Result<()> {
         let cors = Cors::default().allow_any_origin();
         App::new()
             .wrap(Logger::default())
-            .wrap(cors)
             .service(web::resource("/isbn/{isbn}").route(web::get().to(isbn)))
             .service(web::resource("/ccn/{ccn}").route(web::get().to(ccn)))
             .service(web::resource("/hamming/checkdigits/{input}").route(web::get().to(hamming_check_digits)))
             .service(web::resource("/hamming/syndromes/{input}").route(web::get().to(hamming_syndrome_vector)))
+            .service(web::resource("/bch/{bch}").route(web::get().to(bch)))
+            .service(web::resource("/hash/{input}").route(web::get().to(sha)))
+            .service(web::resource("/crack/").route(web::post().to(crack_normal)))
+            .service(web::resource("/crackbch/").route(web::post().to(crack_bch)))
+            .wrap(cors)
     })
     .bind("127.0.0.1:8080")?
     .run()

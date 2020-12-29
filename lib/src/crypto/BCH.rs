@@ -4,7 +4,9 @@ use super::modular::*;
 use BCHError::*;
 use TripleErrorReason::*;
 
-#[derive(Debug)]
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
 pub enum BCHError {
     InvalidInput(HammingError),
     SingleError(Vec<u32>, u32, u32),
@@ -12,12 +14,42 @@ pub enum BCHError {
     TripleError(TripleErrorReason),
 }
 
-#[derive(Debug)]
+impl std::fmt::Display for BCHError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InvalidInput(_) => write!(f, "An invalid digit was found in the given string"),
+            SingleError(corrected, pos, mag) => write!(f, "An error of magnitude {} was located at position {}. The string has been corrected to {}", mag, pos, corrected.iter().map(|&d| std::char::from_digit(d, 10).unwrap()).collect::<String>()),
+            DoubleError(corrected, (pos1, pos2), (mag1, mag2)) => write!(f, "Two errors of magnitudes {} and {} were found at positions {} and {}. The string has been corrected to {}", mag1, mag2, pos1, pos2, corrected.iter().map(|&d| std::char::from_digit(d, 10).unwrap()).collect::<String>()),
+            TripleError(reason) => write!(f, "More than two errors were detected. The reason given is: '{}'", reason)
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
 pub enum TripleErrorReason {
     DivisionError,
     ErrorAtPositionZero,
     NoValidRoots,
-    ValueCorrectedToTen
+    ValueCorrectedToTen,
+}
+
+impl std::fmt::Display for TripleErrorReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DivisionError => {
+                write!(f, "Encountered an error while attempting modular division")
+            }
+            ErrorAtPositionZero => {
+                write!(f, "An error was present at location 0")
+            }
+            NoValidRoots => {
+                write!(f, "No valid roots existed for Q^2 - 4PR")
+            }
+            ValueCorrectedToTen => {
+                write!(f, "A value was corrected to 10")
+            }
+        }
+    }
 }
 
 pub fn encode_bch(string: &str) -> Result<String, BCHError> {
@@ -50,8 +82,6 @@ pub fn verify_bch_input(input: &str) -> Result<(), BCHError> {
             sv[2].pow(2) - sv[1] * sv[3],
         )
     };
-
-    println!("{:?}", (p, q, r));
 
     return match (p.v(), q.v(), r.v()) {
         (0, 0, 0) => {
@@ -86,11 +116,6 @@ pub fn verify_bch_input(input: &str) -> Result<(), BCHError> {
 
             let mag1 = sv[0] - mag2;
 
-            println!("pos1: {}; pos2: {}", pos1, pos2);
-            println!("mag1: {}; mag2: {}", mag1, mag2);
-
-            println!("{:?}", ints);
-
             ints[pos1.v() as usize - 1] = (ints[pos1.v() as usize - 1] + (11.modulo(11) - mag1).v() as u32)
                 .modulo(11)
                 .v() as u32;
@@ -99,7 +124,7 @@ pub fn verify_bch_input(input: &str) -> Result<(), BCHError> {
                 .v() as u32;
 
             if ints.iter().any(|&elem| elem > 9) {
-                return Err(TripleError(ValueCorrectedToTen))
+                return Err(TripleError(ValueCorrectedToTen));
             }
 
             Err(DoubleError(
