@@ -133,7 +133,7 @@ mod tests {
             let result = generate_syndromes(input);
             match result.clone().ok() {
                 Some(output) => assert_eq!(output, proper),
-                None => panic!(println!("{:?}", result.unwrap())),
+                None => panic!(),
             }
         }
     }

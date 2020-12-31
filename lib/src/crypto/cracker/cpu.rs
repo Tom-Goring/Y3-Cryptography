@@ -14,10 +14,8 @@ pub const ALPHABET: [char; 36] = [
 pub const BCH_ALPHABET: [char; 10] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 pub fn crack_bch(inputs: &[&str]) -> Option<Vec<String>> {
-    println!("{:?}", inputs);
     let mut results: Vec<String> = Vec::new();
     for &input in inputs.iter() {
-        println!("Input: {}", input);
         if let Some(bch_code) = crack(&String::from(input), 6, &BCH_ALPHABET, true) {
             results.push(bch_code);
         }
@@ -46,13 +44,11 @@ pub fn crack(target: &String, password_length: u32, password_alphabet: &'static 
         .map(|o| o.unwrap())
         .collect();
 
-    println!("{:?}", solution);
-
     return if solution.is_empty() {
         None
     } else {
         Some(solution.last().unwrap().clone())
-    }
+    };
 }
 
 fn create_index_array(min_index: i32, max_length: u32) -> Box<[i32]> {
@@ -173,7 +169,6 @@ fn spawn_worker_threads(
     for thread in 0..num_cpus::get() {
         let mut indices = create_index_array(if bch { 0 } else { -1 }, password_length);
         increment_indices(&mut indices, alphabet.len(), thread as i32).unwrap();
-        // println!("Initial value in thread {}: {}", thread, indices_to_string(&indices, &alphabet));
         if !bch {
             handles.push(spawn_worker_thread(
                 done.clone(),
@@ -215,7 +210,7 @@ mod tests {
 
         let hash = "5b8f495b7f02b62eb228c5dbece7c2f81b60b9a3";
         let password = crack(&String::from(hash), 6, &BCH_ALPHABET, true).unwrap();
-        println!("{}", password);
+        assert_eq!(password, "888888");
     }
 
     #[test]

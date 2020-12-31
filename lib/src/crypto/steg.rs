@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub fn xorcise(input: &[u8], key: &[u8]) -> Vec<u8> {
     input
         .iter()
@@ -16,7 +18,6 @@ fn get_bit_at(input: u8, n: u8) -> bool {
 
 pub fn embed(carrier: &str, payload: &str, encryption_key: &str) -> String {
     let encrypted_payload = xorcise(payload.as_bytes(), encryption_key.as_bytes());
-    // let encrypted_payload = payload.as_bytes();
     let zws = '\u{200B}';
     let zwsj = '\u{200C}';
     let mut output = String::new();
@@ -73,7 +74,6 @@ fn extract(message: &str, key: &str) -> (String, String) {
     }
 
     let unencrypted_payload = xorcise(&payload_digest, key.as_bytes());
-    // let unencrypted_payload = payload_digest;
 
     (
         carrier.replace('\u{200d}', ""),
@@ -88,13 +88,12 @@ mod tests {
     #[test]
     pub fn steganographic_encryption() {
         let carrier = "Hello There!";
-        let payload = "General Kenobi, LIGHTSABERS YUMMY";
+        let payload = "General Kenobi";
         let key = "simple_key";
         let message = embed(carrier, payload, key);
-        println!("Carrier with embedded payload: {}", message);
         let (mes1, mes2) = extract(&message, key);
-        println!("Carrier: {}", mes1);
-        println!("Payload: {}", mes2);
+        assert_eq!(mes1, "Hello There!");
+        assert_eq!(mes2, "General Kenobi");
     }
 
     #[test]

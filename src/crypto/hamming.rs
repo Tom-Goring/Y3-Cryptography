@@ -13,11 +13,9 @@ pub const S4: [u32; 10] = [1, 8, 5, 9, 4, 7, 2, 6, 3, 10];
 
 pub fn calculate_digit(weights: &[u32], input: &[u32], length: usize) -> Result<u32, &'static str> {
     if input.len() != length {
-        println!("Input length does not equal length.");
         return Err("Input length does not equal length.");
     }
     if weights.len() != length {
-        println!("Weights length does not equal length.");
         return Err("Weights length does not equal length.");
     }
 
