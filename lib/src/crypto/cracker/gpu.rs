@@ -91,8 +91,8 @@ pub fn crack(inputs: &[&str]) -> Option<Vec<String>> {
         results.push(string);
     }
 
-    if results.len() != 0 {
-        Some(results.clone())
+    if !results.is_empty() {
+        Some(results)
     } else {
         None
     }

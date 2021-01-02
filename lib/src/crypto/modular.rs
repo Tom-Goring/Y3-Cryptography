@@ -77,7 +77,7 @@ impl Modular {
                 });
             }
         }
-        return None;
+        None
     }
 
     pub fn pow(self, power: i32) -> Self {
@@ -143,19 +143,11 @@ impl PartialEq for Modular {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value
     }
-
-    fn ne(&self, other: &Self) -> bool {
-        self.value != other.value
-    }
 }
 
 impl PartialEq<i32> for Modular {
     fn eq(&self, other: &i32) -> bool {
         self.value == *other
-    }
-
-    fn ne(&self, other: &i32) -> bool {
-        self.value != *other
     }
 }
 

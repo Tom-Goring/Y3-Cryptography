@@ -28,9 +28,9 @@ pub fn crack_bch(inputs: &[&str]) -> Option<Vec<String>> {
     }
 }
 
-pub fn crack(target: &String, password_length: u32, password_alphabet: &'static [char], bch: bool) -> Option<String> {
+pub fn crack(target: &str, password_length: u32, password_alphabet: &'static [char], bch: bool) -> Option<String> {
     let handles = spawn_worker_threads(
-        Arc::new(target.to_string()),
+        target.into(),
         &password_alphabet,
         password_length,
         Arc::new(AtomicBool::from(false)),
@@ -56,7 +56,7 @@ fn create_index_array(min_index: i32, max_length: u32) -> Box<[i32]> {
 }
 
 #[inline]
-fn indices_to_string(indices: &Box<[i32]>, alphabet: &[char]) -> String {
+fn indices_to_string(indices: &[i32], alphabet: &[char]) -> String {
     let mut output = String::new();
     for index in 0..indices.len() {
         if indices[index] != -1 {
@@ -103,7 +103,7 @@ fn increment_indices(indices: &mut Box<[i32]>, alphabet_size: usize, amount: i32
 fn spawn_worker_thread(
     done: Arc<AtomicBool>,
     mut indices: Box<[i32]>,
-    target: Arc<String>,
+    target: Arc<str>,
     alphabet: Arc<&'static [char]>,
 ) -> JoinHandle<Option<String>> {
     let mut result = None;
@@ -131,7 +131,7 @@ fn spawn_worker_thread(
 fn spawn_worker_thread_for_bch(
     done: Arc<AtomicBool>,
     mut indices: Box<[i32]>,
-    target: Arc<String>,
+    target: Arc<str>,
     alphabet: Arc<&'static [char]>,
 ) -> JoinHandle<Option<String>> {
     let mut result = None;
@@ -159,7 +159,7 @@ fn spawn_worker_thread_for_bch(
 }
 
 fn spawn_worker_threads(
-    target: Arc<String>,
+    target: Arc<str>,
     alphabet: &'static [char],
     password_length: u32,
     done: Arc<AtomicBool>,

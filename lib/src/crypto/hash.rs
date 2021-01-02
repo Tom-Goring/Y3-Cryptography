@@ -4,7 +4,7 @@ use rl_crypto::sha1::Sha1;
 pub fn sha1(input: &str) -> String {
     let mut sha = Sha1::new();
     sha.input_str(input);
-    sha.result_str().to_owned()
+    sha.result_str()
 }
 
 #[cfg(test)]
