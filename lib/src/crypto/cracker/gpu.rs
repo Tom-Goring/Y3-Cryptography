@@ -4,7 +4,7 @@ use ocl::{Buffer, MemFlags, ProQue};
 pub fn crack(inputs: &[&str]) -> Option<Vec<String>> {
     let src = include_str!("kernel.cl");
 
-    let pro_que = ProQue::builder().src(src).dims(2000000000).build().ok()?;
+    let pro_que = ProQue::builder().src(src).dims(4000000000_usize).build().ok()?;
 
     let raw_ascii_alphabet: Vec<u8> = vec![
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
@@ -101,6 +101,8 @@ pub fn crack(inputs: &[&str]) -> Option<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Instant;
+
     #[test]
     pub fn simple_crack() {
         let hash = "c2543fff3bfa6f144c2f06a7de6cd10c0b650cae";
@@ -113,6 +115,18 @@ mod tests {
         let hash = "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d";
         let password = crack(&[hash]).unwrap();
         assert_eq!(password.first().unwrap(), "hello");
+    }
+
+    #[test]
+    pub fn crack_last() {
+        let now = Instant::now();
+        let hashes = ["c67fec2f7f2f9959839c94423152cada55d1c3bf"];
+        let password = crack(&hashes).unwrap();
+        println!(
+            "Time to enumerate all passwords on GPU: {}s",
+            now.elapsed().as_secs_f32()
+        );
+        assert_eq!(password.first().unwrap(), "8aaaaa");
     }
 
     #[test]

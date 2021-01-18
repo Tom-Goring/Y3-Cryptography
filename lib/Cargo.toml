@@ -19,7 +19,6 @@ itertools = "0.9.0"
 gcd = "2.0.1"
 num = "0.3.1"
 sha1 = "0.6.0"
-rl-crypto = { version= "0.2.36", package = "rust-crypto" }
 num_cpus = "1.13.0"
 ocl = "0.19.3"
 hex = "0.4.2"
@@ -33,3 +32,10 @@ futures-core = "0.3.8"
 futures-util = "0.3.8"
 rand_seeder = "0.2.2"
 rand_pcg = "0.3.0"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "benches"
+harness = false

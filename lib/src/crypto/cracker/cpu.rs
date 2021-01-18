@@ -3,8 +3,7 @@ use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 
-use rl_crypto::digest::Digest;
-use rl_crypto::sha1::Sha1;
+use sha1::Sha1;
 
 pub const ALPHABET: [char; 36] = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
@@ -16,7 +15,7 @@ pub const BCH_ALPHABET: [char; 10] = ['0', '1', '2', '3', '4', '5', '6', '7', '8
 pub fn crack_bch(inputs: &[&str]) -> Option<Vec<String>> {
     let mut results: Vec<String> = Vec::new();
     for &input in inputs.iter() {
-        if let Some(bch_code) = crack(&String::from(input), 6, &BCH_ALPHABET, true) {
+        if let Some(bch_code) = _crack(&String::from(input), 6, &BCH_ALPHABET, true) {
             results.push(bch_code);
         }
     }
@@ -28,7 +27,11 @@ pub fn crack_bch(inputs: &[&str]) -> Option<Vec<String>> {
     }
 }
 
-pub fn crack(target: &str, password_length: u32, password_alphabet: &'static [char], bch: bool) -> Option<String> {
+pub fn crack_single(target: &str) -> Option<String> {
+    _crack(target, 6, &ALPHABET, false)
+}
+
+pub fn _crack(target: &str, password_length: u32, password_alphabet: &'static [char], bch: bool) -> Option<String> {
     let handles = spawn_worker_threads(
         target.into(),
         &password_alphabet,
@@ -116,8 +119,8 @@ fn spawn_worker_thread(
                 break;
             }
 
-            sha.input_str(&indices_to_string(&indices, &alphabet));
-            let hashed_password = sha.result_str();
+            sha.update(&indices_to_string(&indices, &alphabet).as_bytes());
+            let hashed_password = sha.digest().to_string();
             if target == Arc::from(hashed_password) {
                 done.store(true, Ordering::SeqCst);
                 result = Some(indices_to_string(&indices, &alphabet));
@@ -139,8 +142,8 @@ fn spawn_worker_thread_for_bch(
     thread::spawn(move || {
         loop {
             if let Ok(bch) = crate::bch::encode_bch(&indices_to_string(&indices, &alphabet)) {
-                sha.input_str(&bch);
-                let hashed_password = sha.result_str();
+                sha.update(&bch.as_bytes());
+                let hashed_password = sha.digest().to_string();
                 if target == Arc::from(hashed_password) {
                     done.store(true, Ordering::SeqCst);
                     result = Some(indices_to_string(&indices, &alphabet));
@@ -191,36 +194,37 @@ fn spawn_worker_threads(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Instant;
+
     #[test]
     pub fn simple_crack() {
         let hash = "c2543fff3bfa6f144c2f06a7de6cd10c0b650cae";
-        let password = crack(&String::from(hash), 6, &ALPHABET, false).unwrap();
+        let password = crack_single(hash).unwrap();
         assert_eq!(password, "this");
     }
 
     #[test]
-    pub fn simple_bch_crack() {
-        let hash = "4586580521292b61185246bbac71853c46fe5b17";
-        let password = crack(&String::from(hash), 6, &BCH_ALPHABET, true).unwrap();
-        assert_eq!(password, "000001");
-
-        let hash = "902608824fae2a1918d54d569d20819a4288a4e4";
-        let password = crack(&String::from(hash), 6, &BCH_ALPHABET, true).unwrap();
-        assert_eq!(password, "000011");
-
-        let hash = "5b8f495b7f02b62eb228c5dbece7c2f81b60b9a3";
-        let password = crack(&String::from(hash), 6, &BCH_ALPHABET, true).unwrap();
-        assert_eq!(password, "888888");
+    pub fn crack_late_permutation() {
+        let hash = "1f5523a8f535289b3401b29958d01b2966ed61d2";
+        let start = Instant::now();
+        let password = crack_single(hash).unwrap();
+        println!(
+            "Time to enumerate all passwords on CPU: {}s",
+            start.elapsed().as_secs_f32()
+        );
+        assert_eq!(password, "999999");
     }
 
     #[test]
-    pub fn bch_crack() {
+    pub fn simple_bch_crack() {
         let hashes = [
             "4586580521292b61185246bbac71853c46fe5b17",
             "902608824fae2a1918d54d569d20819a4288a4e4",
             "5b8f495b7f02b62eb228c5dbece7c2f81b60b9a3",
         ];
         let codes = crack_bch(&hashes).unwrap();
-        assert_eq!(codes.len(), 3);
+        assert_eq!(codes[0], "000001");
+        assert_eq!(codes[1], "000011");
+        assert_eq!(codes[2], "888888");
     }
 }
